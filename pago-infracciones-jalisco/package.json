@@ -1,0 +1,21 @@
+{
+  "name": "pago-infracciones-jalisco-skill",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Consulta y, si el usuario autoriza, paga infracciones vehiculares del portal del Gobierno de Jalisco.",
+  "scripts": {
+    "consulta": "node ./scripts/jalisco-flow.js",
+    "preflight": "node ./scripts/jalisco-flow.js --preflight",
+    "self-test": "node ./scripts/jalisco-flow.js --self-test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "dependencies": {
+    "playwright-core": "^1.59.1"
+  }
+}
