@@ -8,14 +8,20 @@ Constancia*.pdf
 constancia-*.pdf
 Recibo*CFE*.pdf
 recibo-cfe*.pdf
+Semanas*cotizadas*IMSS*.pdf
+semanas-cotizadas-imss*.pdf
 constancia-run-*/
 constancia-live-capture-*/
 sat-buzon-*/
+imss-semanas-run-*/
+jalisco-run-*/
 
 # Logs y perfiles temporales de Chrome
 *.log
 sat-*-chrome-profile/
 cfe-chrome-profile/
+imss-semanas-chrome-profile/
+jalisco-chrome-profile/
 
 # Credenciales / secretos por si alguien los deja por accidente
 .env

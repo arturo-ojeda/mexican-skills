@@ -12,6 +12,7 @@
 | 📄 | [`constancia-situacion-fiscal`](./constancia-situacion-fiscal) | Descarga la CSF del SAT en PDF. |
 | 🔍 | [`constancia-fiscal-extractor`](./constancia-fiscal-extractor) | Convierte un PDF de CSF en JSON normalizado. |
 | ⚡ | [`recibo-cfe`](./recibo-cfe) | Descarga el recibo de luz más reciente para usar como comprobante de domicilio. |
+| 🚗 | [`pago-infracciones-jalisco`](./pago-infracciones-jalisco) | Consulta adeudos vehiculares en el portal del Gobierno de Jalisco (resuelve reCAPTCHA invisible vía 2Captcha). |
 
 ## 🔑 Variables clave
 

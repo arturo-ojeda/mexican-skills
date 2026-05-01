@@ -64,6 +64,10 @@ jobs:
         working-directory: constancia-situacion-fiscal
         run: npm ci --no-audit --no-fund
 
+      - name: Install pago-infracciones-jalisco deps
+        working-directory: pago-infracciones-jalisco
+        run: npm ci --no-audit --no-fund
+
       - name: buzon-tributario --preflight (espera fallo por env vars faltantes)
         working-directory: buzon-tributario
         run: |
@@ -90,6 +94,24 @@ jobs:
           # Preguntamos a node cuál es su CWD para comparar manzanas con manzanas.
           expected="$(node -e 'console.log(process.cwd())')"
           out=$(node "$GITHUB_WORKSPACE/constancia-situacion-fiscal/scripts/sat-flow.js" --self-test)
+          echo "$out"
+          echo "$out" | EXPECTED="$expected" node -e "let s=''; process.stdin.on('data',c=>s+=c).on('end',()=>{const d=JSON.parse(s); if(d.artifactsDir !== process.env.EXPECTED){throw new Error('expected '+process.env.EXPECTED+', got '+d.artifactsDir);}})"
+
+      - name: pago-infracciones-jalisco --preflight (espera fallo por env vars faltantes)
+        working-directory: pago-infracciones-jalisco
+        run: |
+          set +e
+          out=$(node ./scripts/jalisco-flow.js --preflight)
+          code=$?
+          echo "$out"
+          test "$code" -eq 2
+          echo "$out" | node -e "let s=''; process.stdin.on('data',c=>s+=c).on('end',()=>{const d=JSON.parse(s); if(d.status!=='preflight_failed'){throw new Error('expected preflight_failed: '+s);}})"
+
+      - name: pago-infracciones-jalisco --self-test (artifactsDir cae en CWD)
+        run: |
+          mkdir -p /tmp/work && cd /tmp/work
+          expected="$(node -e 'console.log(process.cwd())')"
+          out=$(node "$GITHUB_WORKSPACE/pago-infracciones-jalisco/scripts/jalisco-flow.js" --self-test)
           echo "$out"
           echo "$out" | EXPECTED="$expected" node -e "let s=''; process.stdin.on('data',c=>s+=c).on('end',()=>{const d=JSON.parse(s); if(d.artifactsDir !== process.env.EXPECTED){throw new Error('expected '+process.env.EXPECTED+', got '+d.artifactsDir);}})"
 
