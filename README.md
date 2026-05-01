@@ -11,6 +11,7 @@
 | 📬 | [`buzon-tributario`](./buzon-tributario) | Lee mensajes del Buzón Tributario del SAT sin disparar acuses. |
 | 📄 | [`constancia-situacion-fiscal`](./constancia-situacion-fiscal) | Descarga la CSF del SAT en PDF. |
 | 🔍 | [`constancia-fiscal-extractor`](./constancia-fiscal-extractor) | Convierte un PDF de CSF en JSON normalizado. |
+| 🆔 | [`curp`](./curp) | Descarga la Constancia de CURP en PDF desde el portal oficial de RENAPO (gob.mx). |
 | ⚡ | [`recibo-cfe`](./recibo-cfe) | Descarga el recibo de luz más reciente para usar como comprobante de domicilio. |
 | 🚗 | [`pago-infracciones-jalisco`](./pago-infracciones-jalisco) | Consulta adeudos vehiculares en el portal del Gobierno de Jalisco (resuelve reCAPTCHA invisible vía 2Captcha). |
 
@@ -22,7 +23,8 @@
 | 🔒 | `SAT_PASSWORD` | Skills SAT | **Secreto** |
 | ⚡ | `CFE_USERNAME` | Skill CFE | PII |
 | 🔒 | `CFE_PASSWORD` | Skill CFE | **Secreto** |
-| 🔒 | `TWOCAPTCHA_API_KEY` | CAPTCHA del SAT (cuenta en [2captcha.com](https://2captcha.com)) | **Secreto** |
+| 🆔 | `CURP_VALUE` | Skill CURP | PII |
+| 🔒 | `TWOCAPTCHA_API_KEY` | CAPTCHA del SAT/CURP/Jalisco (cuenta en [2captcha.com](https://2captcha.com)) | **Secreto** |
 | 🌐 | `CHROME_BIN` | Override del binario de Chrome (si la detección falla) | Path |
 
 Lista completa: [`.env.example`](./.env.example).
@@ -31,7 +33,7 @@ Lista completa: [`.env.example`](./.env.example).
 
 ## 📁 Outputs
 
-Los PDFs y screenshots caen directamente en **`$(pwd)`** — la carpeta desde donde corres el comando. Override por skill: `SAT_ARTIFACTS_DIR`, `SAT_BUZON_ARTIFACTS_DIR`, `CFE_ARTIFACTS_DIR`. Contienen PII: bórralos antes de compartir.
+Los PDFs y screenshots caen directamente en **`$(pwd)`** — la carpeta desde donde corres el comando. Override por skill: `SAT_ARTIFACTS_DIR`, `SAT_BUZON_ARTIFACTS_DIR`, `CFE_ARTIFACTS_DIR`, `CURP_ARTIFACTS_DIR`, `JALISCO_INFRACCIONES_ARTIFACTS_DIR`. Contienen PII: bórralos antes de compartir.
 
 ## 📜 Convenciones
 
