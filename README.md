@@ -1,6 +1,6 @@
 # 🇲🇽 mexican-skills
 
-> Agent skills para automatizar trámites mexicanos (SAT, CFE) desde Cursor, Claude Code u otro agente.
+> Agent skills para automatizar trámites mexicanos (SAT, CFE, IMSS) desde Cursor, Claude Code u otro agente.
 
 🍎 macOS · 🐧 Linux · ⚙️ Node 18+ · 📦 Cada skill es **independiente**: instalas sólo la que necesitas
 
@@ -13,6 +13,7 @@
 | 🔍 | [`constancia-fiscal-extractor`](./constancia-fiscal-extractor) | Convierte un PDF de CSF en JSON normalizado. |
 | 🆔 | [`curp`](./curp) | Descarga la Constancia de CURP en PDF desde el portal oficial de RENAPO (gob.mx). |
 | ⚡ | [`recibo-cfe`](./recibo-cfe) | Descarga el recibo de luz más reciente para usar como comprobante de domicilio. |
+| 🏥 | [`imss-semanas-cotizadas`](./imss-semanas-cotizadas) | Descarga el documento de Semanas Cotizadas del IMSS (HTTP-only; resuelve CAPTCHA con 2Captcha y maneja 2FA por SMS). |
 | 🚗 | [`pago-infracciones-jalisco`](./pago-infracciones-jalisco) | Consulta adeudos vehiculares en el portal del Gobierno de Jalisco (resuelve reCAPTCHA invisible vía 2Captcha). |
 
 ## 🔑 Variables clave
@@ -24,7 +25,9 @@
 | ⚡ | `CFE_USERNAME` | Skill CFE | PII |
 | 🔒 | `CFE_PASSWORD` | Skill CFE | **Secreto** |
 | 🆔 | `CURP_VALUE` | Skill CURP | PII |
-| 🔒 | `TWOCAPTCHA_API_KEY` | CAPTCHA del SAT/CURP/Jalisco (cuenta en [2captcha.com](https://2captcha.com)) | **Secreto** |
+| 🏥 | `IMSS_NSS` / `IMSS_CURP` / `IMSS_EMAIL` / `IMSS_PHONE` | Skill IMSS | PII |
+| 🔒 | `IMSS_SMS_TOKEN` | Token SMS de IMSS (fase 2) | Efímero |
+| 🔒 | `TWOCAPTCHA_API_KEY` | CAPTCHA del SAT/CURP/IMSS/Jalisco (cuenta en [2captcha.com](https://2captcha.com)) | **Secreto** |
 | 🌐 | `CHROME_BIN` | Override del binario de Chrome (si la detección falla) | Path |
 
 Lista completa: [`.env.example`](./.env.example).
@@ -33,7 +36,7 @@ Lista completa: [`.env.example`](./.env.example).
 
 ## 📁 Outputs
 
-Los PDFs y screenshots caen directamente en **`$(pwd)`** — la carpeta desde donde corres el comando. Override por skill: `SAT_ARTIFACTS_DIR`, `SAT_BUZON_ARTIFACTS_DIR`, `CFE_ARTIFACTS_DIR`, `CURP_ARTIFACTS_DIR`, `JALISCO_INFRACCIONES_ARTIFACTS_DIR`. Contienen PII: bórralos antes de compartir.
+Los PDFs y screenshots caen directamente en **`$(pwd)`** — la carpeta desde donde corres el comando. Override por skill: `SAT_ARTIFACTS_DIR`, `SAT_BUZON_ARTIFACTS_DIR`, `CFE_ARTIFACTS_DIR`, `CURP_ARTIFACTS_DIR`, `IMSS_ARTIFACTS_DIR`, `JALISCO_INFRACCIONES_ARTIFACTS_DIR`. Contienen PII: bórralos antes de compartir.
 
 ## 📜 Convenciones
 
