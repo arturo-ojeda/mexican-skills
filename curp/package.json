@@ -1,0 +1,21 @@
+{
+  "name": "curp-skill",
+  "version": "1.0.0",
+  "private": true,
+  "bin": {
+    "curp": "./scripts/curp-flow.js"
+  },
+  "scripts": {
+    "curp": "node ./scripts/curp-flow.js",
+    "preflight": "node ./scripts/curp-flow.js --preflight",
+    "self-test": "node ./scripts/curp-flow.js --self-test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "dependencies": {}
+}
