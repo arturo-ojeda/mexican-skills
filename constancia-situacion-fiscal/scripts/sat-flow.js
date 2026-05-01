@@ -15,7 +15,7 @@ try {
   if (process.argv.some((arg) => ARG_BYPASS_BROWSER.includes(arg))) {
     chromium = null;
   } else {
-    console.error('playwright-core no está instalado. Ejecuta:');
+    console.error('playwright-core no est? instalado. Ejecuta:');
     console.error(`  cd ${SKILL_ROOT} && npm install`);
     process.exit(2);
   }
@@ -37,7 +37,7 @@ const SPAWN_CHROME = process.env.SAT_NO_SPAWN !== '1';
 const DEFAULT_PUBLIC_START_URL = process.env.SAT_PUBLIC_START_URL || 'https://wwwmat.sat.gob.mx/aplicacion/53027/genera-tu-constancia-de-situacion-fiscal.';
 const DEFAULT_LAUNCHER_URL = process.env.SAT_LAUNCHER_URL || 'https://wwwmat.sat.gob.mx/app/seg/faces/pages/lanzador.jsf?url=/operacion/53027/genera-tu-constancia-de-situacion-fiscal.&tipoLogeo=c&target=principal&hostServer=https://wwwmat.sat.gob.mx';
 const DEFAULT_PDF_PATH = process.env.SAT_PDF_PATH || '/PTSC/IdcSiat/IdcGeneraConstancia.jsf';
-const DEFAULT_ARTIFACTS_DIR = process.env.SAT_ARTIFACTS_DIR || path.join(process.cwd(), 'artifacts');
+const DEFAULT_ARTIFACTS_DIR = process.env.SAT_ARTIFACTS_DIR || process.cwd();
 const DEFAULT_TIMEOUT = Number(process.env.SAT_TIMEOUT_MS || 30000);
 const POST_LOGIN_TIMEOUT = Number(process.env.SAT_POST_LOGIN_TIMEOUT_MS || 60000);
 
@@ -48,27 +48,6 @@ const CREDENTIAL_FILES = [
   path.join(os.homedir(), '.bash_profile'),
   path.join(os.homedir(), '.profile'),
 ];
-
-function profilePath() {
-  if (process.env.MEXICAN_SKILLS_PROFILE) return process.env.MEXICAN_SKILLS_PROFILE;
-  const xdg = process.env.XDG_CONFIG_HOME && process.env.XDG_CONFIG_HOME.trim()
-    ? process.env.XDG_CONFIG_HOME
-    : path.join(os.homedir(), '.config');
-  return path.join(xdg, 'mexican-skills', 'profile.json');
-}
-
-function readProfileField(key) {
-  const file = profilePath();
-  if (!fs.existsSync(file)) return null;
-  try {
-    const data = JSON.parse(fs.readFileSync(file, 'utf8') || '{}');
-    const value = data && typeof data === 'object' ? data[key] : undefined;
-    if (value === undefined || value === null || value === '') return null;
-    return { value: String(value), source: file };
-  } catch {
-    return null;
-  }
-}
 
 function nowStamp() {
   return new Date().toISOString().replace(/[:.]/g, '-');
@@ -160,12 +139,10 @@ function loadConfig() {
   const shellSolver = envSolverKey
     ? null
     : (readShellVar('TWOCAPTCHA_API_KEY') || readShellVar('CAPTCHA_SOLVER_API_KEY'));
-  const profileRfc = (envRfc || shellRfc) ? null : readProfileField('rfc');
 
   let rfcSource;
   if (envRfc) rfcSource = 'environment';
   else if (shellRfc) rfcSource = shellRfc.source;
-  else if (profileRfc) rfcSource = profileRfc.source;
   else rfcSource = 'missing';
 
   return {
@@ -174,16 +151,15 @@ function loadConfig() {
     launcherUrl: DEFAULT_LAUNCHER_URL,
     pdfPath: DEFAULT_PDF_PATH,
     artifactsDir: DEFAULT_ARTIFACTS_DIR,
-    rfc: envRfc || shellRfc?.value || profileRfc?.value || '',
+    rfc: envRfc || shellRfc?.value || '',
     password: envPassword || shellPassword?.value || '',
     solverApiKey: envSolverKey || shellSolver?.value || '',
     rfcSource,
     credentialSource: envRfc || envPassword
       ? 'environment'
-      : (shellRfc?.source || shellPassword?.source || profileRfc?.source || 'missing'),
+      : (shellRfc?.source || shellPassword?.source || 'missing'),
     passwordSource: envPassword ? 'environment' : (shellPassword?.source || 'missing'),
     solverKeySource: envSolverKey ? 'environment' : (shellSolver?.source || null),
-    profilePath: profilePath(),
   };
 }
 
@@ -230,7 +206,7 @@ async function spawnChromeCdp() {
     if (probe.ok) return { pid: proc.pid, log: CHROME_LOG, profile: CHROME_PROFILE };
     await sleep(500);
   }
-  throw new Error(`Chrome arrancó (pid ${proc.pid}) pero CDP no respondió tras 20s. Log: ${CHROME_LOG}`);
+  throw new Error(`Chrome arranc? (pid ${proc.pid}) pero CDP no respondi? tras 20s. Log: ${CHROME_LOG}`);
 }
 
 async function urlOk(url) {
@@ -288,7 +264,7 @@ async function connectBrowserWithRecovery(url) {
 
 async function solveCaptchaVia2Captcha(imagePath, apiKey) {
   if (!apiKey) {
-    return { ok: false, code: 'solver_unavailable', message: 'TWOCAPTCHA_API_KEY no está configurada' };
+    return { ok: false, code: 'solver_unavailable', message: 'TWOCAPTCHA_API_KEY no est? configurada' };
   }
 
   const base64Body = fs.readFileSync(imagePath).toString('base64');
@@ -336,7 +312,7 @@ async function solveCaptchaVia2Captcha(imagePath, apiKey) {
     }
   }
 
-  return { ok: false, code: 'solver_failed', message: '2Captcha agotó el tiempo de espera', requestId: id };
+  return { ok: false, code: 'solver_failed', message: '2Captcha agot? el tiempo de espera', requestId: id };
 }
 
 async function newCleanPage(browser) {
@@ -392,22 +368,22 @@ async function extractPageState(page) {
   const url = page.url();
 
   const blocked = hasAny(bodyText, [
-    'problema con tu autenticación',
+    'problema con tu autenticaci?n',
     'problema con tu autenticacion',
     'acceso bloqueado',
     'demasiados intentos',
-    'inténtalo más tarde',
+    'int?ntalo m?s tarde',
     'intentalo mas tarde',
   ]);
 
   const failed = hasAny(bodyText, [
     'captcha incorrecto',
-    'captcha no válido',
+    'captcha no v?lido',
     'captcha no valido',
-    'contraseña incorrecta',
+    'contrase?a incorrecta',
     'password incorrect',
     'error',
-    'inválido',
+    'inv?lido',
     'invalido',
   ]);
 
@@ -521,12 +497,12 @@ function preflightReport() {
   const chromeBin = defaultChromeBinary();
   const issues = [];
 
-  if (!chromium) issues.push(`playwright-core no está instalado. Ejecuta: cd ${SKILL_ROOT} && npm install`);
-  if (!chromeBin) issues.push('No se encontró Chrome. Define CHROME_BIN o instálalo.');
+  if (!chromium) issues.push(`playwright-core no est? instalado. Ejecuta: cd ${SKILL_ROOT} && npm install`);
+  if (!chromeBin) issues.push('No se encontr? Chrome. Define CHROME_BIN o inst?lalo.');
   else if (!fs.existsSync(chromeBin)) issues.push(`CHROME_BIN apunta a una ruta inexistente: ${chromeBin}`);
-  if (!config.rfc) issues.push('SAT_RFC no está definida (env, shell rc, ni profile).');
-  if (!config.password) issues.push('SAT_PASSWORD no está definida (debe ir en env o shell rc; nunca en profile).');
-  if (!config.solverApiKey) issues.push('TWOCAPTCHA_API_KEY no está definida (debe ir en env o shell rc; se requiere para --auto-solve).');
+  if (!config.rfc) issues.push('SAT_RFC no est? definida (env o shell rc).');
+  if (!config.password) issues.push('SAT_PASSWORD no est? definida (env o shell rc).');
+  if (!config.solverApiKey) issues.push('TWOCAPTCHA_API_KEY no est? definida (env o shell rc; requerida para --auto-solve).');
 
   return {
     status: issues.length ? 'preflight_failed' : 'preflight_ok',
@@ -547,7 +523,6 @@ function preflightReport() {
     rfcSource: config.rfcSource,
     passwordSource: config.passwordSource,
     solverKeySource: config.solverKeySource,
-    profilePath: config.profilePath,
     issues,
   };
 }
@@ -631,7 +606,7 @@ async function main() {
       printJson({
         status: 'cdp_unavailable',
         cdpUrl: config.cdpUrl,
-        message: 'Chrome arrancó pero CDP sigue sin responder.',
+        message: 'Chrome arranc? pero CDP sigue sin responder.',
         details: cdp,
         chromeSpawnInfo,
       });
@@ -661,7 +636,7 @@ async function main() {
     } catch (error) {
       printJson({
         status: 'cdp_unavailable',
-        message: 'Chrome CDP respondió al probe HTTP pero no aceptó una sesión usable de Playwright.',
+        message: 'Chrome CDP respondi? al probe HTTP pero no acept? una sesi?n usable de Playwright.',
         cdpUrl: config.cdpUrl,
         details: error.message,
       });
@@ -687,7 +662,7 @@ async function main() {
       const state = await extractPageState(page);
       printJson({
         status: 'submitted_unknown',
-        message: 'Cargó la página de login pero no se encontró la imagen del CAPTCHA',
+        message: 'Carg? la p?gina de login pero no se encontr? la imagen del CAPTCHA',
         artifacts: { runDir, pageScreenshot: pageShot, loginScreenshot: loginShot },
         entry,
         loginLauncherUrl,
@@ -771,17 +746,17 @@ async function main() {
     };
 
     if (state.blocked) {
-      printJson({ status: 'blocked', message: 'SAT bloqueó o frenó el acceso tras el intento.', ...basePayload });
+      printJson({ status: 'blocked', message: 'SAT bloque? o fren? el acceso tras el intento.', ...basePayload });
       return;
     }
 
     if (!opResult.ok && state.failed) {
-      printJson({ status: 'submitted_failed', message: 'El envío ocurrió pero SAT mostró error o rechazo.', ...basePayload });
+      printJson({ status: 'submitted_failed', message: 'El env?o ocurri? pero SAT mostr? error o rechazo.', ...basePayload });
       return;
     }
 
     if (!opResult.ok) {
-      printJson({ status: 'submitted_unknown', message: 'Se envió el formulario, pero no se alcanzó el trámite operativo esperado.', ...basePayload });
+      printJson({ status: 'submitted_unknown', message: 'Se envi? el formulario, pero no se alcanz? el tr?mite operativo esperado.', ...basePayload });
       return;
     }
 
@@ -789,7 +764,7 @@ async function main() {
     if (!frame) {
       printJson({
         status: 'pdf_unavailable',
-        message: 'Login exitoso, pero no se encontró el frame del trámite de constancia.',
+        message: 'Login exitoso, pero no se encontr? el frame del tr?mite de constancia.',
         ...basePayload,
       });
       return;
@@ -803,7 +778,7 @@ async function main() {
     if (pdfResult.ok) {
       printJson({
         status: 'pdf_downloaded',
-        message: 'Login exitoso, se volvió al trámite correcto, se entró al frame correcto y se descargó el PDF real.',
+        message: 'Login exitoso, se volvi? al tr?mite correcto, se entr? al frame correcto y se descarg? el PDF real.',
         pdfPath: pdfResult.response.finalPath,
         pdfDeliverySafePath: pdfResult.response.deliverySafePath,
         recommendedDeliveryPath: pdfResult.response.deliverySafePath || pdfResult.response.finalPath,

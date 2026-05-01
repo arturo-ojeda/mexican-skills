@@ -75,41 +75,24 @@ node ./scripts/sat-flow.js ABC123
 7. Entrada al frame correcto.
 8. Generación de constancia.
 9. Captura del PDF real de `IdcGeneraConstancia.jsf` por CDP/response antes del visor de Chrome.
-10. Validación de magic bytes `%PDF` y copia final a `${SAT_ARTIFACTS_DIR:-$(pwd)/artifacts}/<SAT_PDF_NAME_PREFIX> <DD-MM-YYYY>.pdf`. Por default cae en la carpeta donde corriste el comando, no dentro de la skill.
+10. Validación de magic bytes `%PDF` y copia final a `${SAT_ARTIFACTS_DIR:-$(pwd)}/<SAT_PDF_NAME_PREFIX> <DD-MM-YYYY>.pdf`. Por default cae en la carpeta donde corriste el comando, no dentro de la skill.
 11. Duplicado adicional con nombre "delivery-safe" (`<SAT_PDF_NAME_SLUG>-<DD-MM-YYYY>.pdf`) para adjuntarlo por mensajería cuando un canal sea delicado con espacios o nombres largos.
 
-## Memoria de datos personales
+## Credenciales
 
-El RFC es PII no-secreta: el usuario lo teclearía cien veces. Para evitarle eso esta skill resuelve `SAT_RFC` con esta cadena:
+`SAT_RFC`, `SAT_PASSWORD` y `TWOCAPTCHA_API_KEY` se resuelven en este orden: `process.env` → archivos shell rc (`~/.zshrc`, `~/.zprofile`, `~/.bashrc`, `~/.bash_profile`, `~/.profile`).
 
-1. `process.env.SAT_RFC`
-2. `~/.zshrc`, `~/.zprofile`, `~/.bashrc`, `~/.bash_profile`, `~/.profile` (línea `SAT_RFC=...`).
-3. **Profile compartido del repo**: `${MEXICAN_SKILLS_PROFILE:-${XDG_CONFIG_HOME:-~/.config}/mexican-skills/profile.json}`, campo `rfc`.
+`SAT_RFC` es PII pero no es secreto — está bien dejarlo en `~/.zshrc`. `SAT_PASSWORD` y `TWOCAPTCHA_API_KEY` son **secretos**; mantenlos en env o shell rc, nunca commiteados.
 
-Si el RFC viene en alguna de esas tres, no se le pregunta al usuario. **Si no viene en ninguna y el usuario lo proporciona en la conversación, escríbelo al profile y reúsalo de ahí en adelante** (no lo pongas en variables de entorno). El profile es un JSON plano con permisos `0600`:
-
-```json
-{
-  "rfc": "XAXX010101000"
-}
-```
-
-`SAT_PASSWORD` y `TWOCAPTCHA_API_KEY` **son secretos** y JAMÁS se guardan en el profile. Quédense en `process.env` o en archivos shell del usuario.
-
-El campo `rfcSource` que devuelve `--preflight` y `--self-test` te dice de dónde salió el RFC (`environment`, una ruta de shell rc, o el path del profile, o `missing`).
-
-Para más datos del usuario (nombre, CP, régimen, uso CFDI, email) que pueden encadenarse con `constancia-fiscal-extractor` y skills de facturación, ver el README del repo. Convención: el JSON normalizado de `constancia-fiscal-extractor` se mergea directo al profile (mismo schema de claves canónicas).
+`rfcSource` que devuelve `--preflight` y `--self-test` te dice de dónde salió el RFC.
 
 ## Variables de entorno
 
-Las credenciales se leen primero del entorno; si faltan, intenta leerlas desde archivos shell del usuario (`~/.zshrc`, `~/.zprofile`, `~/.bashrc`, `~/.bash_profile`, `~/.profile`). El **RFC** además acepta el profile como tercer fallback (ver sección anterior).
-
-| Variable | Propósito | ¿Acepta profile? | Default |
-| -------- | --------- | ---------------- | ------- |
-| `SAT_RFC` | RFC con homoclave del usuario. | Sí (`rfc`) | — (requerida) |
-| `SAT_PASSWORD` | Contraseña SAT del usuario. **Secreto.** | No | — (requerida) |
-| `TWOCAPTCHA_API_KEY` | API key de 2Captcha. Acepta `CAPTCHA_SOLVER_API_KEY` como alias. **Secreto.** | No | — (requerida para `--auto-solve`) |
-| `MEXICAN_SKILLS_PROFILE` | Override del path del profile. | — | `${XDG_CONFIG_HOME:-~/.config}/mexican-skills/profile.json` |
+| Variable | Propósito | Default |
+| -------- | --------- | ------- |
+| `SAT_RFC` | RFC con homoclave del usuario. | — (requerida) |
+| `SAT_PASSWORD` | Contraseña SAT del usuario. **Secreto.** | — (requerida) |
+| `TWOCAPTCHA_API_KEY` | API key de 2Captcha. Acepta `CAPTCHA_SOLVER_API_KEY` como alias. **Secreto.** | — (requerida para `--auto-solve`) |
 | `SAT_CDP_URL` / `SAT_CDP_PORT` | URL / puerto del Chrome CDP. | `http://127.0.0.1:18800` / `18800` |
 | `SAT_CHROME_PROFILE` | Perfil de Chrome (sesión persistente entre runs). | `${TMPDIR}/sat-csf-chrome-profile` |
 | `SAT_CHROME_LOG` | Log de Chrome. | `${TMPDIR}/sat-csf-chrome.log` |
@@ -117,7 +100,7 @@ Las credenciales se leen primero del entorno; si faltan, intenta leerlas desde a
 | `SAT_PUBLIC_START_URL` | Página pública del trámite. | URL oficial del trámite 53027. |
 | `SAT_LAUNCHER_URL` | Lanzador interno SAT. | URL oficial del lanzador. |
 | `SAT_PDF_PATH` | Ruta dentro del SAT que devuelve el PDF. | `/PTSC/IdcSiat/IdcGeneraConstancia.jsf` |
-| `SAT_ARTIFACTS_DIR` | Carpeta de artefactos (PDFs, screenshots). | `$(pwd)/artifacts` (CWD donde corres el comando) |
+| `SAT_ARTIFACTS_DIR` | Carpeta de artefactos (PDFs, screenshots). | `$(pwd)` (CWD donde corres el comando) |
 | `SAT_PDF_NAME_PREFIX` | Prefijo del nombre final del PDF. | `Constancia` |
 | `SAT_PDF_NAME_SLUG` | Slug "delivery-safe" del PDF. | `constancia-situacion-fiscal` |
 | `SAT_TIMEOUT_MS` | Timeout general en ms. | `30000` |

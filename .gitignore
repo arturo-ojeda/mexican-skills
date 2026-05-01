@@ -1,9 +1,16 @@
 # Dependencias instaladas (se regeneran con `npm install`)
 node_modules/
 
-# Outputs en runtime (screenshots, PDFs, state.json con datos personales)
-artifacts/
-**/artifacts/
+# Outputs en runtime de las skills (PDFs, screenshots, state.json con PII).
+# Las skills bajan archivos a $(pwd); estos patrones cubren los nombres
+# canónicos para que no entren al repo si corres una skill desde la raíz.
+Constancia*.pdf
+constancia-*.pdf
+Recibo*CFE*.pdf
+recibo-cfe*.pdf
+constancia-run-*/
+constancia-live-capture-*/
+sat-buzon-*/
 
 # Logs y perfiles temporales de Chrome
 *.log

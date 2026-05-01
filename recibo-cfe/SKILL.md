@@ -12,7 +12,7 @@ description: Descarga el recibo más reciente de CFE (Comisión Federal de Elect
 - Script principal: `./scripts/download-recibo-cfe.js`
 - Ejecuta el flujo completo y devuelve JSON con `finalPath`.
 - Nombre final por default: `Recibo CFE DD-MM-YYYY.pdf` (configurable con `CFE_PDF_NAME_PREFIX`).
-- El PDF cae en `$(pwd)/artifacts/` por default — la carpeta donde corriste el comando, no dentro de la skill.
+- El PDF cae directamente en `$(pwd)` por default — la carpeta donde corriste el comando, no dentro de la skill.
 
 ## Pre-flight
 
@@ -53,39 +53,30 @@ Flujo:
 3. Extrae el primer `__doPostBack(...DescargaPDF...)` de la tabla `GVHistorial` — el recibo más reciente.
 4. POST a `default.aspx` con `__EVENTTARGET` apuntando a ese postback para disparar la descarga PDF.
 5. Valida `Content-Disposition` / `Content-Type` antes de aceptar el binario.
-6. Guarda el PDF en `${CFE_ARTIFACTS_DIR:-$(pwd)/artifacts}/recibo-cfe-<timestamp>.pdf` y luego invoca `scripts/normalize-recibo-cfe.sh` para renombrarlo a `<prefix> DD-MM-YYYY.pdf`.
+6. Guarda el PDF en `${CFE_ARTIFACTS_DIR:-$(pwd)}/recibo-cfe-<timestamp>.pdf` y luego invoca `scripts/normalize-recibo-cfe.sh` para renombrarlo a `<prefix> DD-MM-YYYY.pdf`.
 
 ## Resultado mínimo aceptable
 
 - PDF real descargado desde Mi Espacio CFE (validación por `Content-Type` / `Content-Disposition`).
-- Ruta final dentro de `<artifactsDir>` (default: `$(pwd)/artifacts/` — la carpeta donde corriste el comando).
+- Ruta final dentro de `<artifactsDir>` (default: `$(pwd)` — la carpeta donde corriste el comando).
 - No declarar éxito si no existe PDF real.
 
-## Memoria de datos personales
+## Credenciales
 
-`CFE_USERNAME` (correo o RPU) NO es secreto: el usuario lo escribiría una y otra vez. Esta skill lo resuelve con la cadena env → shell rc → **profile compartido** (`${MEXICAN_SKILLS_PROFILE:-${XDG_CONFIG_HOME:-~/.config}/mexican-skills/profile.json}`, campo `cfeUsername`).
+`CFE_USERNAME` y `CFE_PASSWORD` se resuelven en este orden: `process.env` → archivos shell rc (`~/.zshrc`, `~/.zprofile`, `~/.bashrc`, `~/.bash_profile`, `~/.profile`).
 
-El profile es un JSON plano con permisos `0600`. Si el usuario te proporciona el username en la conversación, **escríbelo al profile** y reúsalo. Ejemplo del archivo:
+`CFE_USERNAME` (correo o RPU) es PII pero no es secreto — está bien en `~/.zshrc`. `CFE_PASSWORD` **es secreto**; mantenlo en env o shell rc, nunca commiteado.
 
-```json
-{
-  "cfeUsername": "mi-correo@example.com"
-}
-```
-
-`CFE_PASSWORD` **es secreto**: vive sólo en `process.env` o shell rc, nunca en el profile.
-
-`usernameSource`, `passwordSource` y `profilePath` en el output del `--preflight` y `--self-test` te dicen de dónde salió cada credencial.
+`usernameSource` y `passwordSource` en el output del `--preflight` y `--self-test` te dicen de dónde salió cada credencial.
 
 ## Variables de entorno
 
-| Variable | Propósito | ¿Acepta profile? | Default |
-| -------- | --------- | ---------------- | ------- |
-| `CFE_USERNAME` | Usuario de Mi Espacio CFE (correo o RPU). | Sí (`cfeUsername`) | — (requerida) |
-| `CFE_PASSWORD` | Contraseña de Mi Espacio CFE. **Secreto.** | No | — (requerida) |
-| `TWOCAPTCHA_API_KEY` | API key de 2Captcha (no se usa hoy, queda disponible si CFE introduce CAPTCHA). Acepta `CAPTCHA_SOLVER_API_KEY` como alias. **Secreto.** | No | — (opcional) |
-| `MEXICAN_SKILLS_PROFILE` | Override del path del profile. | — | `${XDG_CONFIG_HOME:-~/.config}/mexican-skills/profile.json` |
-| `CFE_ARTIFACTS_DIR` | Carpeta de salida. | `$(pwd)/artifacts` (CWD donde corres el comando) |
+| Variable | Propósito | Default |
+| -------- | --------- | ------- |
+| `CFE_USERNAME` | Usuario de Mi Espacio CFE (correo o RPU). | — (requerida) |
+| `CFE_PASSWORD` | Contraseña de Mi Espacio CFE. **Secreto.** | — (requerida) |
+| `TWOCAPTCHA_API_KEY` | API key de 2Captcha (no se usa hoy, queda disponible si CFE introduce CAPTCHA). Acepta `CAPTCHA_SOLVER_API_KEY` como alias. **Secreto.** | — (opcional) |
+| `CFE_ARTIFACTS_DIR` | Carpeta de salida. | `$(pwd)` (CWD donde corres el comando) |
 | `CFE_LOGIN_URL` | URL del login. | `https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/Login.aspx` |
 | `CFE_RECEIPTS_URL` | URL de recibos / postback. | `https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/default.aspx` |
 | `CFE_PDF_NAME_PREFIX` | Prefijo del nombre final. | `Recibo CFE` |
@@ -104,7 +95,7 @@ No tiene dependencias externas — sólo módulos nativos de Node (`https`, `fs`
 ## Entrega por chat
 
 - Para adjuntar el PDF en la respuesta, usa `MEDIA:` con ruta relativa al workspace, no ruta absoluta del host.
-- Formato preferido: `MEDIA:./artifacts/<nombre-del-archivo>.pdf`.
+- Formato preferido: `MEDIA:./<nombre-del-archivo>.pdf` (el archivo cae directo en `$(pwd)`).
 - Evita espacios en el nombre del archivo cuando lo vayas a mandar por chat. Si hace falta, crea una copia con guiones bajos antes de responder.
 - Si el script devuelve una ruta absoluta, conviértela mentalmente a relativa para la entrega.
 

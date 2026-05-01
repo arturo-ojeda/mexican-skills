@@ -24,7 +24,7 @@ const CDP_PORT = process.env.SAT_CDP_PORT || '18800';
 const CDP_URL = process.env.SAT_CDP_URL || `http://127.0.0.1:${CDP_PORT}`;
 const START_URL = process.env.SAT_BUZON_START_URL || 'https://wwwmat.sat.gob.mx/personas/iniciar-sesion';
 const LAUNCHER_URL = process.env.SAT_BUZON_LAUNCHER_URL || 'https://wwwmat.sat.gob.mx/app/seg/faces/pages/lanzador.jsf?url=/buzon&tipoLogeo=c&target=principal';
-const ARTIFACTS = process.env.SAT_BUZON_ARTIFACTS_DIR || path.join(process.cwd(), 'artifacts');
+const ARTIFACTS = process.env.SAT_BUZON_ARTIFACTS_DIR || process.cwd();
 const TIMEOUT = Number(process.env.SAT_BUZON_TIMEOUT_MS || 60000);
 const CHROME_PROFILE = process.env.SAT_CHROME_PROFILE || path.join(os.tmpdir(), 'sat-buzon-chrome-profile');
 const CHROME_LOG = process.env.SAT_CHROME_LOG || path.join(os.tmpdir(), 'sat-buzon-chrome.log');
@@ -89,29 +89,8 @@ function readShellVar(key) {
   return '';
 }
 
-function profilePath() {
-  if (process.env.MEXICAN_SKILLS_PROFILE) return process.env.MEXICAN_SKILLS_PROFILE;
-  const xdg = process.env.XDG_CONFIG_HOME && process.env.XDG_CONFIG_HOME.trim()
-    ? process.env.XDG_CONFIG_HOME
-    : path.join(os.homedir(), '.config');
-  return path.join(xdg, 'mexican-skills', 'profile.json');
-}
-
-function readProfileField(key) {
-  const file = profilePath();
-  if (!fs.existsSync(file)) return '';
-  try {
-    const data = JSON.parse(fs.readFileSync(file, 'utf8') || '{}');
-    const value = data && typeof data === 'object' ? data[key] : undefined;
-    if (value === undefined || value === null || value === '') return '';
-    return String(value);
-  } catch {
-    return '';
-  }
-}
-
 function loadConfig({ allowMissing = false } = {}) {
-  const rfc = process.env.SAT_RFC || readShellVar('SAT_RFC') || readProfileField('rfc');
+  const rfc = process.env.SAT_RFC || readShellVar('SAT_RFC');
   const password = process.env.SAT_PASSWORD || readShellVar('SAT_PASSWORD');
   const solverKey = process.env.TWOCAPTCHA_API_KEY
     || process.env.CAPTCHA_SOLVER_API_KEY
@@ -119,15 +98,15 @@ function loadConfig({ allowMissing = false } = {}) {
     || readShellVar('CAPTCHA_SOLVER_API_KEY');
   const rfcSource = process.env.SAT_RFC
     ? 'environment'
-    : (readShellVar('SAT_RFC') ? 'shell-rc' : (readProfileField('rfc') ? profilePath() : 'missing'));
+    : (readShellVar('SAT_RFC') ? 'shell-rc' : 'missing');
   const missing = [];
   if (!rfc) missing.push('SAT_RFC');
   if (!password) missing.push('SAT_PASSWORD');
   if (!solverKey) missing.push('TWOCAPTCHA_API_KEY');
   if (missing.length && !allowMissing) {
-    throw new Error(`Faltan credenciales requeridas: ${missing.join(', ')}. SAT_RFC puede vivir en env, shell rc, o el profile (${profilePath()}). SAT_PASSWORD y TWOCAPTCHA_API_KEY siempre en env o shell rc — nunca en el profile.`);
+    throw new Error(`Faltan credenciales requeridas: ${missing.join(', ')}. Defínelas en process.env o en tu shell rc (~/.zshrc, etc.).`);
   }
-  return { rfc, password, solverKey, missing, rfcSource, profilePath: profilePath() };
+  return { rfc, password, solverKey, missing, rfcSource };
 }
 
 function preflight() {
@@ -160,9 +139,8 @@ function preflight() {
   result.env.SAT_PASSWORD = config.password ? 'set' : 'missing';
   result.env.TWOCAPTCHA_API_KEY = config.solverKey ? 'set' : 'missing';
   result.rfcSource = config.rfcSource;
-  result.profilePath = config.profilePath;
   if (config.missing.length) {
-    result.issues.push(`Variables faltantes: ${config.missing.join(', ')}. SAT_RFC también acepta el profile (${config.profilePath}); password y solver key siempre en env/shell.`);
+    result.issues.push(`Variables faltantes: ${config.missing.join(', ')}. Defínelas en process.env o en tu shell rc (~/.zshrc, etc.).`);
   }
 
   result.status = result.issues.length ? 'preflight_failed' : 'preflight_ok';

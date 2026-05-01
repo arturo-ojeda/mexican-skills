@@ -11,7 +11,7 @@ if [[ $# -lt 1 || $# -gt 2 ]]; then
 fi
 
 src="$1"
-out_dir="${2:-${CFE_ARTIFACTS_DIR:-$(pwd)/artifacts}}"
+out_dir="${2:-${CFE_ARTIFACTS_DIR:-$(pwd)}}"
 prefix="${CFE_PDF_NAME_PREFIX:-Recibo CFE}"
 
 if [[ ! -f "$src" ]]; then

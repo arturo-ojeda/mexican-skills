@@ -88,7 +88,7 @@ jobs:
           mkdir -p /tmp/work && cd /tmp/work
           # En macOS /tmp es symlink a /private/tmp, así que process.cwd() lo resuelve.
           # Preguntamos a node cuál es su CWD para comparar manzanas con manzanas.
-          expected="$(node -e 'console.log(process.cwd())')/artifacts"
+          expected="$(node -e 'console.log(process.cwd())')"
           out=$(node "$GITHUB_WORKSPACE/constancia-situacion-fiscal/scripts/sat-flow.js" --self-test)
           echo "$out"
           echo "$out" | EXPECTED="$expected" node -e "let s=''; process.stdin.on('data',c=>s+=c).on('end',()=>{const d=JSON.parse(s); if(d.artifactsDir !== process.env.EXPECTED){throw new Error('expected '+process.env.EXPECTED+', got '+d.artifactsDir);}})"

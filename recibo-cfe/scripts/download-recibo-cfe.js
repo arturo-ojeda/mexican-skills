@@ -9,7 +9,7 @@ const { URL } = require('url');
 const { execFileSync } = require('child_process');
 
 const SKILL_ROOT = path.dirname(__dirname);
-const ARTIFACTS_DIR = process.env.CFE_ARTIFACTS_DIR || path.join(process.cwd(), 'artifacts');
+const ARTIFACTS_DIR = process.env.CFE_ARTIFACTS_DIR || process.cwd();
 const LOGIN_URL = process.env.CFE_LOGIN_URL || 'https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/Login.aspx';
 const RECEIPTS_URL = process.env.CFE_RECEIPTS_URL || 'https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/default.aspx';
 const NORMALIZE_SCRIPT = path.join(__dirname, 'normalize-recibo-cfe.sh');
@@ -72,40 +72,17 @@ function readShellVar(key) {
   return null;
 }
 
-function profilePath() {
-  if (process.env.MEXICAN_SKILLS_PROFILE) return process.env.MEXICAN_SKILLS_PROFILE;
-  const xdg = process.env.XDG_CONFIG_HOME && process.env.XDG_CONFIG_HOME.trim()
-    ? process.env.XDG_CONFIG_HOME
-    : path.join(os.homedir(), '.config');
-  return path.join(xdg, 'mexican-skills', 'profile.json');
-}
-
-function readProfileField(key) {
-  const file = profilePath();
-  if (!fs.existsSync(file)) return null;
-  try {
-    const data = JSON.parse(fs.readFileSync(file, 'utf8') || '{}');
-    const value = data && typeof data === 'object' ? data[key] : undefined;
-    if (value === undefined || value === null || value === '') return null;
-    return { value: String(value), source: file };
-  } catch {
-    return null;
-  }
-}
-
 function loadCredentials({ allowMissing = false } = {}) {
   const envUsername = process.env.CFE_USERNAME || '';
   const envPassword = process.env.CFE_PASSWORD || '';
   const shellUsername = envUsername ? null : readShellVar('CFE_USERNAME');
   const shellPassword = envPassword ? null : readShellVar('CFE_PASSWORD');
-  const profileUsername = (envUsername || shellUsername) ? null : readProfileField('cfeUsername');
-  const username = envUsername || shellUsername?.value || profileUsername?.value || '';
+  const username = envUsername || shellUsername?.value || '';
   const password = envPassword || shellPassword?.value || '';
 
   let usernameSource;
   if (envUsername) usernameSource = 'environment';
   else if (shellUsername) usernameSource = shellUsername.source;
-  else if (profileUsername) usernameSource = profileUsername.source;
   else usernameSource = 'missing';
 
   const passwordSource = envPassword
@@ -114,15 +91,15 @@ function loadCredentials({ allowMissing = false } = {}) {
 
   const source = envUsername || envPassword
     ? 'environment'
-    : (shellUsername?.source || shellPassword?.source || profileUsername?.source || 'missing');
+    : (shellUsername?.source || shellPassword?.source || 'missing');
 
   const missing = [];
   if (!username) missing.push('CFE_USERNAME');
   if (!password) missing.push('CFE_PASSWORD');
   if (missing.length && !allowMissing) {
-    throw new Error(`Faltan credenciales CFE: ${missing.join(' y ')}. CFE_USERNAME puede vivir en env, shell rc, o el profile (${profilePath()}). CFE_PASSWORD siempre en env o shell rc — nunca en el profile.`);
+    throw new Error(`Faltan credenciales CFE: ${missing.join(' y ')}. Defínelas en process.env o en tu shell rc (~/.zshrc, etc.).`);
   }
-  return { username, password, source, usernameSource, passwordSource, profilePath: profilePath(), missing };
+  return { username, password, source, usernameSource, passwordSource, missing };
 }
 
 class SessionClient {
@@ -272,8 +249,8 @@ function preflight() {
   const issues = [];
   const notes = [];
 
-  if (!credentials.username) issues.push(`CFE_USERNAME no está definida (env, shell rc, ni profile ${credentials.profilePath}).`);
-  if (!credentials.password) issues.push('CFE_PASSWORD no está definida (debe ir en env o shell rc; nunca en profile).');
+  if (!credentials.username) issues.push('CFE_USERNAME no está definida (env o shell rc).');
+  if (!credentials.password) issues.push('CFE_PASSWORD no está definida (env o shell rc).');
   if (!fs.existsSync(NORMALIZE_SCRIPT)) issues.push(`Falta el script de normalización: ${NORMALIZE_SCRIPT}`);
   else {
     try {
@@ -305,7 +282,6 @@ function preflight() {
     credentialSource: credentials.source,
     usernameSource: credentials.usernameSource,
     passwordSource: credentials.passwordSource,
-    profilePath: credentials.profilePath,
     issues,
     notes,
   };
@@ -328,7 +304,6 @@ function selfTest() {
     credentialSource: credentials.source,
     usernameSource: credentials.usernameSource,
     passwordSource: credentials.passwordSource,
-    profilePath: credentials.profilePath,
   }, null, 2));
 }
 
@@ -338,7 +313,7 @@ function usage() {
     '',
     'Variables de entorno:',
     '  CFE_USERNAME, CFE_PASSWORD (requeridas)',
-    '  CFE_ARTIFACTS_DIR (default: <skill-root>/artifacts)',
+    '  CFE_ARTIFACTS_DIR (default: $(pwd) — la carpeta donde corras el comando)',
     '  CFE_LOGIN_URL, CFE_RECEIPTS_URL (overrides)',
     '  CFE_PDF_NAME_PREFIX (default: "Recibo CFE")',
     '  CFE_TIMEOUT_MS (default: 30000)',

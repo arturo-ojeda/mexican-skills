@@ -164,20 +164,6 @@ El output normalizado calza directamente con skills de facturación que necesita
 
 La skill downstream todavía necesita `usoCfdi` (G03, D01, etc.) y `correoElectronico` del usuario — la constancia no los contiene.
 
-## Memoria de datos personales (recomendado)
-
-Una vez que el JSON salió validado, **mergéalo al profile compartido del repo** para que skills hermanas (facturación, downloader del SAT, etc.) puedan tomar los mismos datos sin pedírselos al usuario otra vez. El profile vive en:
-
-```text
-${MEXICAN_SKILLS_PROFILE:-${XDG_CONFIG_HOME:-~/.config}/mexican-skills/profile.json}
-```
-
-Es un objeto JSON plano con permisos `0600`. Las claves canónicas que las skills entienden son `rfc`, `nameOrBusinessName`, `personaType`, `postalCode`, `primaryRegimeCode`, `regimes`, `address`, `usoCfdi`, `email`, `cfeUsername`. El JSON normalizado que emite esta skill ya viene con esos nombres, así que el merge es directo.
-
-Si el usuario te dicta `usoCfdi` o `email` (que la constancia no trae) durante la conversación, súmalos al mismo objeto. Como sigue siendo PII, no dejes el archivo en ubicaciones compartidas.
-
-**JAMÁS** metas claves de secretos (`password`, `apiKey`, `token`, etc.) en el profile. La regla de oro: **PII no-secreta al profile, secretos al entorno o shell rc**.
-
 ## Pre-requisitos
 
 - **Node ≥ 18** (stdlib only). Usa `fetch` nativo y APIs estándar de `fs`/`os`/`path`. En macOS y Linux instala vía `nvm`, `brew install node`, `apt install nodejs`, etc.

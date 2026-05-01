@@ -46,7 +46,7 @@ El script:
    - `https://wwwmat.sat.gob.mx/iniciar-expediente/mis-notificaciones/`
    - `https://wwwmat.sat.gob.mx/iniciar-expediente/mis-comunicados/`
    - `https://wwwmat.sat.gob.mx/iniciar-expediente/mis-documentos/`
-7. Guarda screenshots y `state.json` en `${SAT_BUZON_ARTIFACTS_DIR:-$(pwd)/artifacts}/sat-buzon-<timestamp>/`. Por default cae en la carpeta donde corriste el comando, no dentro de la skill.
+7. Guarda screenshots y `state.json` en `${SAT_BUZON_ARTIFACTS_DIR:-$(pwd)}/sat-buzon-<timestamp>/`. Por default cae en la carpeta donde corriste el comando, no dentro de la skill.
 
 ## Cómo resumir resultados
 
@@ -58,36 +58,27 @@ Lee el JSON final que imprime el script o abre `state.json`. Reporta en español
 
 Si el listado muestra enlaces o documentos individuales, indica que **no se abrieron** por seguridad legal y pide confirmación si el usuario quiere abrirlos.
 
-## Memoria de datos personales
+## Credenciales
 
-`SAT_RFC` se resuelve en este orden: env → shell rc → **profile compartido** (`${MEXICAN_SKILLS_PROFILE:-${XDG_CONFIG_HOME:-~/.config}/mexican-skills/profile.json}`, campo `rfc`).
+`SAT_RFC`, `SAT_PASSWORD` y `TWOCAPTCHA_API_KEY` se resuelven en este orden: `process.env` → archivos shell rc del usuario (`~/.zshrc`, `~/.zprofile`, `~/.bashrc`, `~/.bash_profile`, `~/.profile`).
 
-El profile es un JSON plano con permisos `0600`. Si el usuario te dicta el RFC en la conversación, **escríbelo al profile y reúsalo** en lugar de pedirlo otra vez o exigir variables de entorno. Ejemplo del archivo:
-
-```json
-{
-  "rfc": "XAXX010101000"
-}
-```
-
-`SAT_PASSWORD` y `TWOCAPTCHA_API_KEY` son **secretos**: nunca los metas en el profile. Quédense en `process.env` o shell rc.
+`SAT_RFC` es PII pero no es secreto — está bien dejarlo en `~/.zshrc`. `SAT_PASSWORD` y `TWOCAPTCHA_API_KEY` son **secretos**; mantenlos en env o shell rc, nunca commiteados.
 
 `rfcSource` en el output del `--preflight` te dice de dónde salió el RFC.
 
 ## Variables de entorno
 
-| Variable | Propósito | ¿Acepta profile? | Default |
-| -------- | --------- | ---------------- | ------- |
-| `SAT_RFC` | RFC con homoclave del usuario. | Sí (`rfc`) | — (requerida) |
-| `SAT_PASSWORD` | Contraseña SAT del usuario. **Secreto.** | No | — (requerida) |
-| `TWOCAPTCHA_API_KEY` | API key de 2Captcha. Acepta `CAPTCHA_SOLVER_API_KEY` como alias. **Secreto.** | No | — (requerida) |
-| `MEXICAN_SKILLS_PROFILE` | Override del path del profile. | — | `${XDG_CONFIG_HOME:-~/.config}/mexican-skills/profile.json` |
+| Variable | Propósito | Default |
+| -------- | --------- | ------- |
+| `SAT_RFC` | RFC con homoclave del usuario. | — (requerida) |
+| `SAT_PASSWORD` | Contraseña SAT del usuario. **Secreto.** | — (requerida) |
+| `TWOCAPTCHA_API_KEY` | API key de 2Captcha. Acepta `CAPTCHA_SOLVER_API_KEY` como alias. **Secreto.** | — (requerida) |
 | `SAT_CDP_PORT` / `SAT_CDP_URL` | Puerto / URL del Chrome CDP. | `18800` / `http://127.0.0.1:18800` |
 | `SAT_CHROME_PROFILE` | Perfil de Chrome para reusar sesión. | `${TMPDIR}/sat-buzon-chrome-profile` |
 | `SAT_CHROME_LOG` | Log de Chrome. | `${TMPDIR}/sat-buzon-chrome.log` |
 | `SAT_NO_SPAWN` | `1` para no lanzar Chrome automáticamente (usar uno propio en `SAT_CDP_URL`). | unset (auto-spawn ON) |
 | `CHROME_BIN` | Ruta al binario de Chrome/Chromium. | macOS: `/Applications/Google Chrome.app/...`; Linux: detección automática |
-| `SAT_BUZON_ARTIFACTS_DIR` | Carpeta de artefactos (screenshots, `state.json`). | `$(pwd)/artifacts` (CWD donde corres el comando) |
+| `SAT_BUZON_ARTIFACTS_DIR` | Carpeta de artefactos (screenshots, `state.json`). | `$(pwd)` (CWD donde corres el comando) |
 | `SAT_BUZON_TIMEOUT_MS` | Timeout general en ms. | `60000` |
 
 ## Instalación
