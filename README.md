@@ -35,7 +35,7 @@ Cada skill tiene su propio `SKILL.md` con detalles, variables y troubleshooting.
 Todas las skills siguen las mismas reglas para ser intercambiables y portables:
 
 - **Triggers en español neutro/mexicano** en el `description` del frontmatter de `SKILL.md`, con casos de uso reales.
-- **Rutas relativas**. Los artefactos se escriben por default en `<skill-root>/artifacts/`. Nada está hardcoded a un usuario o ruta absoluta del sistema.
+- **Outputs en el CWD del usuario**. Por default cada skill escribe sus artefactos en `$(pwd)/artifacts/` — la carpeta desde donde se invoca el comando. Esto evita engordar la carpeta de instalación de la skill (importante cuando vive en `~/.claude/skills/...`) y deja los PDFs/screenshots donde el usuario los puede agarrar de inmediato. Se puede sobreescribir con `*_ARTIFACTS_DIR` (ver tabla más abajo).
 - **Variables de entorno con fallback a archivos shell** (`~/.zshrc`, `~/.zprofile`, `~/.bashrc`, `~/.bash_profile`, `~/.profile`). Si una variable no está en el entorno, el script intenta leerla de esos archivos antes de fallar.
 - **Pre-flight check** (`--preflight`) en cada skill: valida runtime, dependencias, binarios, variables y permisos. Imprime JSON con `status` (`preflight_ok` / `preflight_failed`) y un array `issues` accionable. Exit code `2` si falla.
 - **Self-test** (`--self-test`) cuando aplica: imprime la configuración resuelta sin tocar red.
@@ -127,7 +127,7 @@ cd ../constancia-fiscal-extractor && chmod +x scripts/*.py
 | `TWOCAPTCHA_API_KEY` | buzon, constancia-csf (opcional en cfe) | API key de 2Captcha. Acepta `CAPTCHA_SOLVER_API_KEY` como alias. |
 | `CHROME_BIN` | buzon, constancia-csf | Override de la ruta a Chrome. |
 | `SAT_CDP_URL` / `SAT_CDP_PORT` | buzon, constancia-csf | Endpoint del Chrome CDP. |
-| `*_ARTIFACTS_DIR` | todas | Carpeta de salida (default: `<skill-root>/artifacts`). |
+| `*_ARTIFACTS_DIR` | todas | Carpeta de salida (default: `$(pwd)/artifacts`, es decir relativa al CWD donde corres el comando). |
 | `CFE_RETRIES` / `CFE_RETRY_BASE_DELAY_MS` | recibo-cfe | Tuning del retry con backoff exponencial. |
 
 Cada `SKILL.md` documenta las variables específicas de su skill con defaults y notas.
@@ -144,12 +144,25 @@ Las skills de este repo funcionan de forma autónoma sin `agent-browser`, pero l
 
 ### Limpiar `artifacts/`
 
-Las skills escriben PDFs, screenshots y `state.json` con datos personales (RFC, dirección, líneas de captura) en `<skill>/artifacts/`. **Nunca commitees esa carpeta** — el `.gitignore` la excluye, pero localmente conviene limpiarla:
+Las skills escriben PDFs, screenshots y `state.json` con datos personales (RFC, dirección, líneas de captura) a `$(pwd)/artifacts/` por default — la carpeta desde donde corriste el comando. **Nunca commitees esa carpeta** si está dentro de un repo: el `.gitignore` de este repo la excluye, pero si corres las skills desde otro proyecto, agrégala manualmente.
+
+Para limpiar:
 
 ```bash
-./scripts/clean-artifacts.sh                 # borra todo
-./scripts/clean-artifacts.sh --dry-run       # sólo lista
-./scripts/clean-artifacts.sh --older-than 7  # borra runs > 7 días
+# Default: limpia ./artifacts/ del CWD actual
+./scripts/clean-artifacts.sh
+
+# Sólo lista lo que borraría
+./scripts/clean-artifacts.sh --dry-run
+
+# Borra entradas con mtime > 7 días
+./scripts/clean-artifacts.sh --older-than 7
+
+# Apunta a uno o más directorios específicos
+./scripts/clean-artifacts.sh ~/trabajo ~/Downloads
+
+# Busca recursivamente cualquier artifacts/ debajo de un árbol
+./scripts/clean-artifacts.sh --recursive ~/dev
 ```
 
 ### CI
@@ -171,9 +184,10 @@ Ver [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
 ├── package.json         # dependencias, scripts, engines, os
 ├── README.txt           # nota corta de uso (cuando aplique)
 ├── <entrypoint>.js      # script principal con --preflight / --self-test / --help
-├── scripts/             # implementación + helpers + debug
-└── artifacts/           # (creada en runtime, en .gitignore) screenshots, PDFs, state.json
+└── scripts/             # implementación + helpers + debug
 ```
+
+> Los outputs **no** se escriben dentro de la skill. Caen en `$(pwd)/artifacts/` (el CWD del usuario), se ignoran vía `.gitignore` del repo, y se limpian con `./scripts/clean-artifacts.sh`.
 
 ## Licencia
 

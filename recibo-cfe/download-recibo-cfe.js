@@ -9,7 +9,7 @@ const { URL } = require('url');
 const { execFileSync } = require('child_process');
 
 const SKILL_ROOT = __dirname;
-const ARTIFACTS_DIR = process.env.CFE_ARTIFACTS_DIR || path.join(SKILL_ROOT, 'artifacts');
+const ARTIFACTS_DIR = process.env.CFE_ARTIFACTS_DIR || path.join(process.cwd(), 'artifacts');
 const LOGIN_URL = process.env.CFE_LOGIN_URL || 'https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/Login.aspx';
 const RECEIPTS_URL = process.env.CFE_RECEIPTS_URL || 'https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/default.aspx';
 const NORMALIZE_SCRIPT = path.join(SKILL_ROOT, 'normalize-recibo-cfe.sh');

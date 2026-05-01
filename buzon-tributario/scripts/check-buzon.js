@@ -22,7 +22,7 @@ try {
 const CDP_URL = process.env.SAT_CDP_URL || `http://127.0.0.1:${process.env.SAT_CDP_PORT || '18800'}`;
 const START_URL = process.env.SAT_BUZON_START_URL || 'https://wwwmat.sat.gob.mx/personas/iniciar-sesion';
 const LAUNCHER_URL = process.env.SAT_BUZON_LAUNCHER_URL || 'https://wwwmat.sat.gob.mx/app/seg/faces/pages/lanzador.jsf?url=/buzon&tipoLogeo=c&target=principal';
-const ARTIFACTS = process.env.SAT_BUZON_ARTIFACTS_DIR || path.join(SKILL_ROOT, 'artifacts');
+const ARTIFACTS = process.env.SAT_BUZON_ARTIFACTS_DIR || path.join(process.cwd(), 'artifacts');
 const TIMEOUT = Number(process.env.SAT_BUZON_TIMEOUT_MS || 60000);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

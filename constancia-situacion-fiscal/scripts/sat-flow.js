@@ -32,7 +32,7 @@ const DEFAULT_CDP_URL = process.env.SAT_CDP_URL || 'http://127.0.0.1:18800';
 const DEFAULT_PUBLIC_START_URL = process.env.SAT_PUBLIC_START_URL || 'https://wwwmat.sat.gob.mx/aplicacion/53027/genera-tu-constancia-de-situacion-fiscal.';
 const DEFAULT_LAUNCHER_URL = process.env.SAT_LAUNCHER_URL || 'https://wwwmat.sat.gob.mx/app/seg/faces/pages/lanzador.jsf?url=/operacion/53027/genera-tu-constancia-de-situacion-fiscal.&tipoLogeo=c&target=principal&hostServer=https://wwwmat.sat.gob.mx';
 const DEFAULT_PDF_PATH = process.env.SAT_PDF_PATH || '/PTSC/IdcSiat/IdcGeneraConstancia.jsf';
-const DEFAULT_ARTIFACTS_DIR = process.env.SAT_ARTIFACTS_DIR || path.join(SKILL_ROOT, 'artifacts');
+const DEFAULT_ARTIFACTS_DIR = process.env.SAT_ARTIFACTS_DIR || path.join(process.cwd(), 'artifacts');
 const DEFAULT_TIMEOUT = Number(process.env.SAT_TIMEOUT_MS || 30000);
 const POST_LOGIN_TIMEOUT = Number(process.env.SAT_POST_LOGIN_TIMEOUT_MS || 60000);
 

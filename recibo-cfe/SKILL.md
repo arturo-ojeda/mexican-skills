@@ -12,6 +12,7 @@ description: Descarga el recibo más reciente de CFE (Comisión Federal de Elect
 - Script principal: `./download-recibo-cfe.js`
 - Ejecuta el flujo completo y devuelve JSON con `finalPath`.
 - Nombre final por default: `Recibo CFE DD-MM-YYYY.pdf` (configurable con `CFE_PDF_NAME_PREFIX`).
+- El PDF cae en `$(pwd)/artifacts/` por default — la carpeta donde corriste el comando, no dentro de la skill.
 
 ## Pre-flight
 
@@ -52,12 +53,12 @@ Flujo:
 3. Extrae el primer `__doPostBack(...DescargaPDF...)` de la tabla `GVHistorial` — el recibo más reciente.
 4. POST a `default.aspx` con `__EVENTTARGET` apuntando a ese postback para disparar la descarga PDF.
 5. Valida `Content-Disposition` / `Content-Type` antes de aceptar el binario.
-6. Guarda el PDF en `<artifactsDir>/recibo-cfe-<timestamp>.pdf` y luego invoca `normalize-recibo-cfe.sh` para renombrarlo a `<prefix> DD-MM-YYYY.pdf`.
+6. Guarda el PDF en `${CFE_ARTIFACTS_DIR:-$(pwd)/artifacts}/recibo-cfe-<timestamp>.pdf` y luego invoca `normalize-recibo-cfe.sh` para renombrarlo a `<prefix> DD-MM-YYYY.pdf`.
 
 ## Resultado mínimo aceptable
 
 - PDF real descargado desde Mi Espacio CFE (validación por `Content-Type` / `Content-Disposition`).
-- Ruta final dentro de `<artifactsDir>` (default: `<skill-root>/artifacts/`).
+- Ruta final dentro de `<artifactsDir>` (default: `$(pwd)/artifacts/` — la carpeta donde corriste el comando).
 - No declarar éxito si no existe PDF real.
 
 ## Variables de entorno
@@ -67,7 +68,7 @@ Flujo:
 | `CFE_USERNAME` | Usuario de Mi Espacio CFE (correo o RPU). | — (requerida) |
 | `CFE_PASSWORD` | Contraseña de Mi Espacio CFE. | — (requerida) |
 | `TWOCAPTCHA_API_KEY` | API key de 2Captcha (no se usa hoy, queda disponible si CFE introduce CAPTCHA). Acepta `CAPTCHA_SOLVER_API_KEY` como alias. | — (opcional) |
-| `CFE_ARTIFACTS_DIR` | Carpeta de salida. | `<skill-root>/artifacts` |
+| `CFE_ARTIFACTS_DIR` | Carpeta de salida. | `$(pwd)/artifacts` (CWD donde corres el comando) |
 | `CFE_LOGIN_URL` | URL del login. | `https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/Login.aspx` |
 | `CFE_RECEIPTS_URL` | URL de recibos / postback. | `https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/default.aspx` |
 | `CFE_PDF_NAME_PREFIX` | Prefijo del nombre final. | `Recibo CFE` |

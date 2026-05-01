@@ -46,7 +46,7 @@ El script:
    - `https://wwwmat.sat.gob.mx/iniciar-expediente/mis-notificaciones/`
    - `https://wwwmat.sat.gob.mx/iniciar-expediente/mis-comunicados/`
    - `https://wwwmat.sat.gob.mx/iniciar-expediente/mis-documentos/`
-7. Guarda screenshots y `state.json` en `${SAT_BUZON_ARTIFACTS_DIR:-./artifacts}/sat-buzon-<timestamp>/`.
+7. Guarda screenshots y `state.json` en `${SAT_BUZON_ARTIFACTS_DIR:-$(pwd)/artifacts}/sat-buzon-<timestamp>/`. Por default cae en la carpeta donde corriste el comando, no dentro de la skill.
 
 ## Cómo resumir resultados
 
@@ -69,7 +69,7 @@ Si el listado muestra enlaces o documentos individuales, indica que **no se abri
 | `SAT_CHROME_PROFILE` | Perfil de Chrome para reusar sesión. | `${TMPDIR}/sat-buzon-chrome-profile` |
 | `SAT_CHROME_LOG` | Log de Chrome. | `${TMPDIR}/sat-buzon-chrome.log` |
 | `CHROME_BIN` | Ruta al binario de Chrome/Chromium. | macOS: `/Applications/Google Chrome.app/...`; Linux: detección automática |
-| `SAT_BUZON_ARTIFACTS_DIR` | Carpeta de artefactos (screenshots, `state.json`). | `<skill-root>/artifacts` |
+| `SAT_BUZON_ARTIFACTS_DIR` | Carpeta de artefactos (screenshots, `state.json`). | `$(pwd)/artifacts` (CWD donde corres el comando) |
 | `SAT_BUZON_TIMEOUT_MS` | Timeout general en ms. | `60000` |
 
 ## Instalación

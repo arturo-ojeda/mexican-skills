@@ -101,9 +101,12 @@ jobs:
           echo "$out"
           test "$code" -eq 2
 
-      - name: constancia-situacion-fiscal --self-test
-        working-directory: constancia-situacion-fiscal
-        run: node ./sat-flow.js --self-test
+      - name: constancia-situacion-fiscal --self-test (artifactsDir cae en CWD)
+        run: |
+          mkdir -p /tmp/work && cd /tmp/work
+          out=$(node "$GITHUB_WORKSPACE/constancia-situacion-fiscal/sat-flow.js" --self-test)
+          echo "$out"
+          echo "$out" | python3 -c "import json,sys,os; d=json.load(sys.stdin); assert d['artifactsDir']=='/tmp/work/artifacts', d"
 
       - name: recibo-cfe --preflight (espera fallo por env vars faltantes)
         working-directory: recibo-cfe

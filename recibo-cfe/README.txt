@@ -9,7 +9,8 @@ Hace el flujo completo:
 - detecta el recibo más reciente
 - descarga el PDF
 - normaliza el nombre a `<prefix> DD-MM-YYYY.pdf` (default: "Recibo CFE")
-- lo deja en <CFE_ARTIFACTS_DIR>/ (default: <skill-root>/artifacts/)
+- lo deja en <CFE_ARTIFACTS_DIR>/ (default: $(pwd)/artifacts/, es decir la carpeta donde
+  corriste el comando — no dentro de la skill)
 
 Comandos:
   node ./download-recibo-cfe.js --preflight   # valida entorno

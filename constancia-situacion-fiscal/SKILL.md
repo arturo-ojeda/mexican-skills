@@ -94,7 +94,7 @@ node ./sat-flow.js ABC123
 7. Entrada al frame correcto.
 8. Generación de constancia.
 9. Captura del PDF real de `IdcGeneraConstancia.jsf` por CDP/response antes del visor de Chrome.
-10. Validación de magic bytes `%PDF` y copia final a `<artifactsDir>/<SAT_PDF_NAME_PREFIX> <DD-MM-YYYY>.pdf`.
+10. Validación de magic bytes `%PDF` y copia final a `${SAT_ARTIFACTS_DIR:-$(pwd)/artifacts}/<SAT_PDF_NAME_PREFIX> <DD-MM-YYYY>.pdf`. Por default cae en la carpeta donde corriste el comando, no dentro de la skill.
 11. Duplicado adicional con nombre "delivery-safe" (`<SAT_PDF_NAME_SLUG>-<DD-MM-YYYY>.pdf`) para adjuntarlo por mensajería cuando un canal sea delicado con espacios o nombres largos.
 
 ## Variables de entorno
@@ -110,7 +110,7 @@ Las credenciales se leen primero del entorno; si faltan, intenta leerlas desde a
 | `SAT_PUBLIC_START_URL` | Página pública del trámite. | URL oficial del trámite 53027. |
 | `SAT_LAUNCHER_URL` | Lanzador interno SAT. | URL oficial del lanzador. |
 | `SAT_PDF_PATH` | Ruta dentro del SAT que devuelve el PDF. | `/PTSC/IdcSiat/IdcGeneraConstancia.jsf` |
-| `SAT_ARTIFACTS_DIR` | Carpeta de artefactos (PDFs, screenshots). | `<skill-root>/artifacts` |
+| `SAT_ARTIFACTS_DIR` | Carpeta de artefactos (PDFs, screenshots). | `$(pwd)/artifacts` (CWD donde corres el comando) |
 | `SAT_PDF_NAME_PREFIX` | Prefijo del nombre final del PDF. | `Constancia` |
 | `SAT_PDF_NAME_SLUG` | Slug "delivery-safe" del PDF. | `constancia-situacion-fiscal` |
 | `SAT_TIMEOUT_MS` | Timeout general en ms. | `30000` |
