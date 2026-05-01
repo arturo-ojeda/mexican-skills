@@ -58,16 +58,7 @@ Ambos son wrappers mínimos que delegan en `scripts/`. La implementación real v
 node ./sat-flow.js --auto-solve
 ```
 
-Pre-requisito: tener un Chrome con remote debugging escuchando en `SAT_CDP_URL` (default `http://127.0.0.1:18800`). Por ejemplo:
-
-```bash
-"$CHROME_BIN" \
-  --headless=new \
-  --remote-debugging-port=18800 \
-  --user-data-dir="$TMPDIR/sat-chrome-profile" \
-  --disable-gpu --no-first-run --no-default-browser-check \
-  about:blank &
-```
+El script auto-arranca Chrome headless con CDP si no encuentra uno corriendo en `SAT_CDP_URL` (default `http://127.0.0.1:18800`). Usa `CHROME_BIN` o lo detecta por plataforma; el perfil queda en `${SAT_CHROME_PROFILE:-$TMPDIR/sat-csf-chrome-profile}`. Para reusar tu Chrome existente en lugar de lanzar uno nuevo, exporta `SAT_NO_SPAWN=1`.
 
 ## Self-test
 
@@ -106,7 +97,10 @@ Las credenciales se leen primero del entorno; si faltan, intenta leerlas desde a
 | `SAT_RFC` | RFC con homoclave del usuario. | — (requerida) |
 | `SAT_PASSWORD` | Contraseña SAT del usuario. | — (requerida) |
 | `TWOCAPTCHA_API_KEY` | API key de 2Captcha. Acepta `CAPTCHA_SOLVER_API_KEY` como alias. | — (requerida para `--auto-solve`) |
-| `SAT_CDP_URL` | URL del Chrome CDP. | `http://127.0.0.1:18800` |
+| `SAT_CDP_URL` / `SAT_CDP_PORT` | URL / puerto del Chrome CDP. | `http://127.0.0.1:18800` / `18800` |
+| `SAT_CHROME_PROFILE` | Perfil de Chrome (sesión persistente entre runs). | `${TMPDIR}/sat-csf-chrome-profile` |
+| `SAT_CHROME_LOG` | Log de Chrome. | `${TMPDIR}/sat-csf-chrome.log` |
+| `SAT_NO_SPAWN` | `1` para no lanzar Chrome automáticamente. | unset (auto-spawn ON) |
 | `SAT_PUBLIC_START_URL` | Página pública del trámite. | URL oficial del trámite 53027. |
 | `SAT_LAUNCHER_URL` | Lanzador interno SAT. | URL oficial del lanzador. |
 | `SAT_PDF_PATH` | Ruta dentro del SAT que devuelve el PDF. | `/PTSC/IdcSiat/IdcGeneraConstancia.jsf` |

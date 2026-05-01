@@ -2,7 +2,7 @@
 
 > Agent skills para automatizar trámites mexicanos (SAT, CFE) desde Cursor, Claude Code u otro agente.
 
-🍎 macOS · 🐧 Linux · ⚙️ Node 18+ · 🐍 Python 3.8+
+🍎 macOS · 🐧 Linux · ⚙️ Node 18+ · 📦 Cada skill es **independiente**: instalas sólo la que necesitas
 
 ## 🛠️ Skills
 

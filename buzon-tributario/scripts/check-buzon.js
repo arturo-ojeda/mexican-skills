@@ -2,6 +2,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { spawn } = require('child_process');
 
 const SKILL_ROOT = path.resolve(__dirname, '..');
 
@@ -19,11 +20,15 @@ try {
   }
 }
 
-const CDP_URL = process.env.SAT_CDP_URL || `http://127.0.0.1:${process.env.SAT_CDP_PORT || '18800'}`;
+const CDP_PORT = process.env.SAT_CDP_PORT || '18800';
+const CDP_URL = process.env.SAT_CDP_URL || `http://127.0.0.1:${CDP_PORT}`;
 const START_URL = process.env.SAT_BUZON_START_URL || 'https://wwwmat.sat.gob.mx/personas/iniciar-sesion';
 const LAUNCHER_URL = process.env.SAT_BUZON_LAUNCHER_URL || 'https://wwwmat.sat.gob.mx/app/seg/faces/pages/lanzador.jsf?url=/buzon&tipoLogeo=c&target=principal';
 const ARTIFACTS = process.env.SAT_BUZON_ARTIFACTS_DIR || path.join(process.cwd(), 'artifacts');
 const TIMEOUT = Number(process.env.SAT_BUZON_TIMEOUT_MS || 60000);
+const CHROME_PROFILE = process.env.SAT_CHROME_PROFILE || path.join(os.tmpdir(), 'sat-buzon-chrome-profile');
+const CHROME_LOG = process.env.SAT_CHROME_LOG || path.join(os.tmpdir(), 'sat-buzon-chrome.log');
+const SPAWN_CHROME = process.env.SAT_NO_SPAWN !== '1';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const clean = (text) => String(text || '').replace(/\s+/g, ' ').trim();
@@ -258,6 +263,43 @@ function summarizeSection(section) {
   return { name: section.name, url: section.url, summary };
 }
 
+async function isCdpUp(url) {
+  try {
+    const response = await fetch(`${url}/json/version`);
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureChromeCdp() {
+  if (await isCdpUp(CDP_URL)) return { spawned: false, url: CDP_URL };
+  if (!SPAWN_CHROME) {
+    throw new Error(`Chrome CDP no responde en ${CDP_URL} y SAT_NO_SPAWN=1; arranca Chrome manualmente`);
+  }
+  const chromeBin = defaultChromeBinary();
+  if (!chromeBin || !fs.existsSync(chromeBin)) {
+    throw new Error('Chrome no encontrado. Define CHROME_BIN o instala Chrome/Chromium.');
+  }
+  fs.mkdirSync(CHROME_PROFILE, { recursive: true });
+  const logFd = fs.openSync(CHROME_LOG, 'a');
+  const proc = spawn(chromeBin, [
+    '--headless=new',
+    `--remote-debugging-port=${CDP_PORT}`,
+    `--user-data-dir=${CHROME_PROFILE}`,
+    '--disable-gpu',
+    '--no-first-run',
+    '--no-default-browser-check',
+    'about:blank',
+  ], { detached: true, stdio: ['ignore', logFd, logFd] });
+  proc.unref();
+  for (let i = 0; i < 40; i += 1) {
+    if (await isCdpUp(CDP_URL)) return { spawned: true, pid: proc.pid, url: CDP_URL, log: CHROME_LOG };
+    await sleep(500);
+  }
+  throw new Error(`Chrome arrancó (pid ${proc.pid}) pero CDP no responde en ${CDP_URL} tras 20s. Log: ${CHROME_LOG}`);
+}
+
 async function main() {
   if (process.argv.includes('--preflight')) {
     preflight();
@@ -269,8 +311,10 @@ async function main() {
   const runDir = path.join(ARTIFACTS, `sat-buzon-${nowStamp()}`);
   fs.mkdirSync(runDir, { recursive: true });
 
-  const probe = await fetch(`${CDP_URL}/json/version`).then((r) => r.json()).catch(() => null);
-  if (!probe) throw new Error(`Chrome CDP no disponible en ${CDP_URL}`);
+  const cdpInfo = await ensureChromeCdp();
+  if (cdpInfo.spawned) {
+    process.stderr.write(`[chrome] arrancado en ${CDP_URL} (pid ${cdpInfo.pid}, log ${cdpInfo.log})\n`);
+  }
   const browser = await chromium.connectOverCDP(CDP_URL, { timeout: TIMEOUT });
   const context = await browser.newContext({ acceptDownloads: false });
   context.setDefaultTimeout(TIMEOUT);

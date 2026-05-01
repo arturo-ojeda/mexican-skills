@@ -24,11 +24,6 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
-      - name: Setup Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
       - name: node --check (todos los .js)
         run: |
           set -e
@@ -44,14 +39,6 @@ jobs:
             echo "checking $f"
             bash -n "$f"
           done < <(find . -path ./node_modules -prune -o -name '*.sh' -print)
-
-      - name: python -m py_compile (todos los .py)
-        run: |
-          set -e
-          while IFS= read -r f; do
-            echo "checking $f"
-            python3 -m py_compile "$f"
-          done < <(find . -path ./node_modules -prune -o -name '*.py' -print)
 
   preflight:
     name: Preflight & self-test
@@ -69,11 +56,6 @@ jobs:
         with:
           node-version: 20
 
-      - name: Setup Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
       - name: Install buzon-tributario deps
         working-directory: buzon-tributario
         run: npm install --no-audit --no-fund
@@ -90,7 +72,7 @@ jobs:
           code=$?
           echo "$out"
           test "$code" -eq 2
-          echo "$out" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['status']=='preflight_failed', d"
+          echo "$out" | node -e "let s=''; process.stdin.on('data',c=>s+=c).on('end',()=>{const d=JSON.parse(s); if(d.status!=='preflight_failed'){throw new Error('expected preflight_failed: '+s);}})"
 
       - name: constancia-situacion-fiscal --preflight (espera fallo por env vars faltantes)
         working-directory: constancia-situacion-fiscal
@@ -106,7 +88,7 @@ jobs:
           mkdir -p /tmp/work && cd /tmp/work
           out=$(node "$GITHUB_WORKSPACE/constancia-situacion-fiscal/sat-flow.js" --self-test)
           echo "$out"
-          echo "$out" | python3 -c "import json,sys,os; d=json.load(sys.stdin); assert d['artifactsDir']=='/tmp/work/artifacts', d"
+          echo "$out" | node -e "let s=''; process.stdin.on('data',c=>s+=c).on('end',()=>{const d=JSON.parse(s); if(d.artifactsDir !== '/tmp/work/artifacts'){throw new Error('expected /tmp/work/artifacts, got '+d.artifactsDir);}})"
 
       - name: recibo-cfe --preflight (espera fallo por env vars faltantes)
         working-directory: recibo-cfe
@@ -125,16 +107,13 @@ jobs:
         run: |
           set +e
           echo "not a pdf" > /tmp/notapdf.txt
-          out=$(python3 ./constancia-fiscal-extractor/scripts/preflight.py /tmp/notapdf.txt)
+          out=$(node ./constancia-fiscal-extractor/scripts/preflight.js /tmp/notapdf.txt)
           code=$?
           echo "$out"
           test "$code" -eq 1
 
-      - name: constancia-fiscal-extractor validate.py (RFC genérico SAT)
+      - name: constancia-fiscal-extractor validate.js (RFC genérico SAT)
         run: |
-          out=$(python3 ./constancia-fiscal-extractor/scripts/validate.py <<'JSON'
-          {"rfc":"xaxx010101000","nameOrBusinessName":"PUBLICO EN GENERAL","postalCode":"06100"}
-          JSON
-          )
+          out=$(echo '{"rfc":"xaxx010101000","nameOrBusinessName":"PUBLICO EN GENERAL","postalCode":"06100"}' | node ./constancia-fiscal-extractor/scripts/validate.js)
           echo "$out"
-          echo "$out" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['rfc']=='XAXX010101000', d; assert d['personaType']=='FISICA', d"
+          echo "$out" | node -e "let s=''; process.stdin.on('data',c=>s+=c).on('end',()=>{const d=JSON.parse(s); if(d.rfc!=='XAXX010101000' || d.personaType!=='FISICA'){throw new Error(s);}})"

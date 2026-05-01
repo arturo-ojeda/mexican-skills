@@ -26,10 +26,6 @@ secrets.json
 *.swp
 *~
 
-# Python (por si alguna skill futura lo usa)
-__pycache__/
-*.pyc
-
 # npm / yarn / pnpm
 npm-debug.log*
 yarn-debug.log*

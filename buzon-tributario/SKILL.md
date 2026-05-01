@@ -32,12 +32,12 @@ Si falla, lee `issues` del JSON impreso y corrige antes de seguir.
 ## Quick run
 
 ```bash
-bash ./scripts/check-buzon.sh
+node ./scripts/check-buzon.js
 ```
 
 El script:
 
-1. Levanta Chrome headless con CDP en `http://127.0.0.1:${SAT_CDP_PORT:-18800}` si no existe.
+1. Levanta Chrome headless con CDP en `http://127.0.0.1:${SAT_CDP_PORT:-18800}` automáticamente si no existe (usa el binario de `CHROME_BIN` o el detectado por plataforma; perfil en `${SAT_CHROME_PROFILE:-$TMPDIR/sat-buzon-chrome-profile}`). Para deshabilitar el auto-spawn y reusar un Chrome propio, exporta `SAT_NO_SPAWN=1`.
 2. Entra a `https://wwwmat.sat.gob.mx/personas/iniciar-sesion`.
 3. Usa el lanzador del Buzón Tributario.
 4. Lee `SAT_RFC` y `SAT_PASSWORD` del entorno o de archivos shell (`~/.zshrc`, `~/.zprofile`, `~/.bashrc`, etc.).
@@ -68,6 +68,7 @@ Si el listado muestra enlaces o documentos individuales, indica que **no se abri
 | `SAT_CDP_PORT` / `SAT_CDP_URL` | Puerto / URL del Chrome CDP. | `18800` / `http://127.0.0.1:18800` |
 | `SAT_CHROME_PROFILE` | Perfil de Chrome para reusar sesión. | `${TMPDIR}/sat-buzon-chrome-profile` |
 | `SAT_CHROME_LOG` | Log de Chrome. | `${TMPDIR}/sat-buzon-chrome.log` |
+| `SAT_NO_SPAWN` | `1` para no lanzar Chrome automáticamente (usar uno propio en `SAT_CDP_URL`). | unset (auto-spawn ON) |
 | `CHROME_BIN` | Ruta al binario de Chrome/Chromium. | macOS: `/Applications/Google Chrome.app/...`; Linux: detección automática |
 | `SAT_BUZON_ARTIFACTS_DIR` | Carpeta de artefactos (screenshots, `state.json`). | `$(pwd)/artifacts` (CWD donde corres el comando) |
 | `SAT_BUZON_TIMEOUT_MS` | Timeout general en ms. | `60000` |

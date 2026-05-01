@@ -3,6 +3,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { spawn } = require('child_process');
 
 const SKILL_ROOT = path.resolve(__dirname, '..');
 
@@ -28,7 +29,11 @@ const {
   sleep,
 } = require('../sat-pdf-tools');
 
-const DEFAULT_CDP_URL = process.env.SAT_CDP_URL || 'http://127.0.0.1:18800';
+const DEFAULT_CDP_PORT = process.env.SAT_CDP_PORT || '18800';
+const DEFAULT_CDP_URL = process.env.SAT_CDP_URL || `http://127.0.0.1:${DEFAULT_CDP_PORT}`;
+const CHROME_PROFILE = process.env.SAT_CHROME_PROFILE || path.join(os.tmpdir(), 'sat-csf-chrome-profile');
+const CHROME_LOG = process.env.SAT_CHROME_LOG || path.join(os.tmpdir(), 'sat-csf-chrome.log');
+const SPAWN_CHROME = process.env.SAT_NO_SPAWN !== '1';
 const DEFAULT_PUBLIC_START_URL = process.env.SAT_PUBLIC_START_URL || 'https://wwwmat.sat.gob.mx/aplicacion/53027/genera-tu-constancia-de-situacion-fiscal.';
 const DEFAULT_LAUNCHER_URL = process.env.SAT_LAUNCHER_URL || 'https://wwwmat.sat.gob.mx/app/seg/faces/pages/lanzador.jsf?url=/operacion/53027/genera-tu-constancia-de-situacion-fiscal.&tipoLogeo=c&target=principal&hostServer=https://wwwmat.sat.gob.mx';
 const DEFAULT_PDF_PATH = process.env.SAT_PDF_PATH || '/PTSC/IdcSiat/IdcGeneraConstancia.jsf';
@@ -170,6 +175,31 @@ function parseArgs(argv) {
   }
 
   return out;
+}
+
+async function spawnChromeCdp() {
+  const chromeBin = defaultChromeBinary();
+  if (!chromeBin || !fs.existsSync(chromeBin)) {
+    throw new Error('Chrome no encontrado. Define CHROME_BIN o instala Chrome/Chromium.');
+  }
+  fs.mkdirSync(CHROME_PROFILE, { recursive: true });
+  const logFd = fs.openSync(CHROME_LOG, 'a');
+  const proc = spawn(chromeBin, [
+    '--headless=new',
+    `--remote-debugging-port=${DEFAULT_CDP_PORT}`,
+    `--user-data-dir=${CHROME_PROFILE}`,
+    '--disable-gpu',
+    '--no-first-run',
+    '--no-default-browser-check',
+    'about:blank',
+  ], { detached: true, stdio: ['ignore', logFd, logFd] });
+  proc.unref();
+  for (let i = 0; i < 40; i += 1) {
+    const probe = await urlOk(DEFAULT_CDP_URL);
+    if (probe.ok) return { pid: proc.pid, log: CHROME_LOG, profile: CHROME_PROFILE };
+    await sleep(500);
+  }
+  throw new Error(`Chrome arrancó (pid ${proc.pid}) pero CDP no respondió tras 20s. Log: ${CHROME_LOG}`);
 }
 
 async function urlOk(url) {
@@ -537,16 +567,44 @@ async function main() {
 
   ensureDir(config.artifactsDir);
 
-  const cdp = await urlOk(config.cdpUrl);
+  let cdp = await urlOk(config.cdpUrl);
+  let chromeSpawnInfo = null;
   if (!cdp.ok) {
-    printJson({
-      status: 'cdp_unavailable',
-      cdpUrl: config.cdpUrl,
-      message: 'Chrome CDP no está respondiendo en el endpoint configurado',
-      details: cdp,
-    });
-    process.exitCode = 2;
-    return;
+    if (!SPAWN_CHROME) {
+      printJson({
+        status: 'cdp_unavailable',
+        cdpUrl: config.cdpUrl,
+        message: 'Chrome CDP no responde y SAT_NO_SPAWN=1; arranca Chrome manualmente o desactiva la flag.',
+        details: cdp,
+      });
+      process.exitCode = 2;
+      return;
+    }
+    try {
+      chromeSpawnInfo = await spawnChromeCdp();
+    } catch (error) {
+      printJson({
+        status: 'cdp_unavailable',
+        cdpUrl: config.cdpUrl,
+        message: `No se pudo arrancar Chrome: ${error.message}`,
+        details: cdp,
+      });
+      process.exitCode = 2;
+      return;
+    }
+    cdp = await urlOk(config.cdpUrl);
+    if (!cdp.ok) {
+      printJson({
+        status: 'cdp_unavailable',
+        cdpUrl: config.cdpUrl,
+        message: 'Chrome arrancó pero CDP sigue sin responder.',
+        details: cdp,
+        chromeSpawnInfo,
+      });
+      process.exitCode = 2;
+      return;
+    }
+    process.stderr.write(`[chrome] arrancado en ${config.cdpUrl} (pid ${chromeSpawnInfo.pid}, log ${chromeSpawnInfo.log})\n`);
   }
 
   const runDir = ensureDir(path.join(config.artifactsDir, `constancia-run-${nowStamp()}`));

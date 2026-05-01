@@ -1,0 +1,22 @@
+{
+  "name": "constancia-fiscal-extractor-skill",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Convierte un PDF de Constancia de Situación Fiscal del SAT en JSON normalizado.",
+  "bin": {
+    "csf-preflight": "./scripts/preflight.js",
+    "csf-validate": "./scripts/validate.js"
+  },
+  "scripts": {
+    "preflight": "node ./scripts/preflight.js",
+    "validate": "node ./scripts/validate.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "dependencies": {}
+}

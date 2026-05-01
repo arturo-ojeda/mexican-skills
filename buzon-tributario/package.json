@@ -4,7 +4,7 @@
   "private": true,
   "description": "Revisa mensajes del Buzón Tributario del SAT en modo lectura.",
   "scripts": {
-    "check": "bash ./scripts/check-buzon.sh",
+    "check": "node ./scripts/check-buzon.js",
     "preflight": "node ./scripts/check-buzon.js --preflight"
   },
   "engines": {

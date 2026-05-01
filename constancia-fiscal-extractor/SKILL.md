@@ -11,13 +11,13 @@ description: Extrae datos fiscales estructurados (RFC, nombre o razón social, d
 
 La *Constancia de Situación Fiscal* es el documento que el SAT emite a cada contribuyente registrado. Contiene RFC, nombre o razón social, domicilio fiscal, regímenes registrados y obligaciones. Esta skill convierte ese PDF en un objeto JSON normalizado que otras skills (e.g. de facturación) pueden consumir directamente.
 
-Sin red, sin telemetría, sin dependencias externas: sólo Python 3 stdlib. Corre igual en macOS y Linux.
+Sin red, sin telemetría, sin dependencias externas: sólo Node ≥ 18 stdlib. Corre igual en macOS y Linux.
 
 ## Invariantes del agente
 
 **Reglas obligatorias al usar esta skill:**
 
-0. **Responde siempre en español** (neutro mexicano). Sólo las claves del JSON quedan en inglés por diseño, y los mensajes internos de `validate.py` permanecen en inglés.
+0. **Responde siempre en español** (neutro mexicano). Sólo las claves del JSON quedan en inglés por diseño, y los mensajes internos de `validate.js` permanecen en inglés.
 1. **Nunca inventes valores que no estén en el documento.** Si un campo es ilegible, borroso o no aparece, **omítelo del JSON** (no emitas `""` ni `null`). Si el RFC mismo no se puede leer con certeza, detente y pídele al usuario una mejor versión.
 2. **Verifica RFC y código postal carácter por carácter.** Estos se validan server-side por servicios downstream (e.g. facturación). Un dígito mal y la factura se rechaza.
 3. **La constancia es PII.** No la subas a servicios externos, no pegues su contenido en canales compartidos, y no dejes el JSON normalizado en ubicaciones compartidas. Escribe el output sólo donde el usuario lo indique.
@@ -28,7 +28,7 @@ Sin red, sin telemetría, sin dependencias externas: sólo Python 3 stdlib. Corr
 Antes de leer el PDF o extraer cualquier dato, corre este pre-flight con la ruta absoluta del PDF:
 
 ```bash
-python3 ./scripts/preflight.py "<PDF_PATH>"
+node ./scripts/preflight.js "<PDF_PATH>"
 ```
 
 El script verifica:
@@ -36,7 +36,7 @@ El script verifica:
 - El archivo existe, es regular y no está vacío.
 - Es un PDF de verdad (magic bytes `%PDF-`).
 - No está protegido con contraseña (no contiene `/Encrypt`).
-- Reporta versión de Python y plataforma.
+- Reporta versión de Node y plataforma.
 
 Exit code `0` = OK; `1` = falló (razones en `issues` del JSON impreso). Stdlib only, sin dependencias.
 
@@ -55,10 +55,10 @@ Si todo pasa, sigue con **Steps**.
 1. **Origen del PDF.**
    - Si el usuario tiene el PDF en disco: usa esa ruta absoluta como `<PDF_PATH>`.
    - Si NO lo tiene: pídele que lo descargue, o usa la skill [`constancia-situacion-fiscal`](../constancia-situacion-fiscal/) de este repo y usa la ruta `pdfPath` o `pdfDeliverySafePath` que devuelve.
-2. **Pre-flight.** Corre `./scripts/preflight.py <PDF_PATH>` y los chequeos visuales descritos arriba.
+2. **Pre-flight.** Corre `node ./scripts/preflight.js <PDF_PATH>` y los chequeos visuales descritos arriba.
 3. **Lee el PDF.** Lee sólo la primera página salvo que el documento sea inusualmente largo — todos los datos de identidad fiscal viven en la página 1.
 4. **Extrae los campos** (ver tabla de mapeo abajo) en un objeto JSON. Las claves van en inglés; los valores vienen de las etiquetas en español del documento. **Omite la clave por completo** si el valor no está presente (no emitas `""` ni `null`).
-5. **Pasa el JSON por `./scripts/validate.py`** para chequear campos requeridos, normalizar RFC y código postal, y derivar `personaType` / `primaryRegimeCode` / `currentRegimes`.
+5. **Pasa el JSON por `node ./scripts/validate.js`** para chequear campos requeridos, normalizar RFC y código postal, y derivar `personaType` / `primaryRegimeCode` / `currentRegimes`.
 6. **Reporta el JSON normalizado** al usuario. Escríbelo a un archivo sólo si el usuario nombró una ruta explícitamente.
 
 ## Field mapping
@@ -118,13 +118,13 @@ Un régimen sin `endDate` (o con `Vigente`) está activo. El validator seleccion
 ## Correr el validator
 
 ```bash
-cat "<JSON_INPUT_PATH>" | python3 ./scripts/validate.py > "<OUTPUT_PATH>"
+cat "<JSON_INPUT_PATH>" | node ./scripts/validate.js > "<OUTPUT_PATH>"
 ```
 
 O en un one-shot con heredoc:
 
 ```bash
-python3 ./scripts/validate.py <<'JSON'
+node ./scripts/validate.js <<'JSON'
 {
   "rfc": "XAXX010101000",
   "nameOrBusinessName": "PUBLICO EN GENERAL",
@@ -166,16 +166,16 @@ La skill downstream todavía necesita `usoCfdi` (G03, D01, etc.) y `correoElectr
 
 ## Pre-requisitos
 
-- **Python 3.8+** (stdlib only). En macOS viene preinstalado; en Linux usualmente también, o `apt install python3` / `dnf install python3`.
-- **Permisos de ejecución** en los scripts:
+- **Node ≥ 18** (stdlib only). Usa `fetch` nativo y APIs estándar de `fs`/`os`/`path`. En macOS y Linux instala vía `nvm`, `brew install node`, `apt install nodejs`, etc.
+- **Permisos de ejecución** en los scripts (opcional si invocas con `node ...`):
   ```bash
-  chmod +x scripts/preflight.py scripts/validate.py
+  chmod +x scripts/preflight.js scripts/validate.js
   ```
-- Esta skill no necesita Node, ni `playwright-core`, ni red.
+- Esta skill no necesita `playwright-core`, ni red, ni Python.
 
 ## Anonimato y portabilidad
 
-Esta skill es **standalone, stateless y agnóstica del usuario**. No carga datos del usuario, ni API keys, ni configuración específica de máquina. Para reusarla en otro lado, copia la carpeta — los dos scripts dependen sólo de la stdlib de Python 3.
+Esta skill es **standalone, stateless y agnóstica del usuario**. No carga datos del usuario, ni API keys, ni configuración específica de máquina. Para reusarla en otro lado, copia la carpeta — los dos scripts dependen sólo de la stdlib de Node.
 
 ### Disciplina de paths
 
@@ -187,3 +187,12 @@ Esta skill es **standalone, stateless y agnóstica del usuario**. No carga datos
 - Los scripts leen de stdin o argumento CLI, escriben sólo a stdout/stderr. Nada se persiste, loguea o manda a la red. Cero telemetría.
 - El JSON extraído es PII. Escríbelo sólo a una ruta que el usuario nombre explícitamente. No pegues el JSON completo en canales compartidos (PRs, Slack público, issues, gists).
 - Stderr puede incluir el path del usuario (e.g. `/home/<user>/Descargas/...`). Devuélveselo, pero no lo pegues en canales compartidos.
+
+## Instalación
+
+```bash
+cd <skill-root>
+npm install
+```
+
+`npm install` no instala dependencias externas (no hay), sólo registra el `package.json` y permite usar `npm run preflight` / `npm run validate`.
