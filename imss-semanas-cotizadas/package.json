@@ -1,0 +1,21 @@
+{
+  "name": "imss-semanas-cotizadas-skill",
+  "version": "1.0.0",
+  "private": true,
+  "bin": {
+    "imss-semanas-cotizadas": "./scripts/imss-flow.js"
+  },
+  "scripts": {
+    "semanas": "node ./scripts/imss-flow.js",
+    "preflight": "node ./scripts/imss-flow.js --preflight",
+    "self-test": "node ./scripts/imss-flow.js --self-test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "dependencies": {}
+}
