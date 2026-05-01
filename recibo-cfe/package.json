@@ -1,0 +1,22 @@
+{
+  "name": "recibo-cfe-skill",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Descarga el recibo más reciente de CFE en PDF para usarlo como comprobante de domicilio.",
+  "bin": {
+    "recibo-cfe": "./download-recibo-cfe.js"
+  },
+  "scripts": {
+    "download": "node ./download-recibo-cfe.js",
+    "preflight": "node ./download-recibo-cfe.js --preflight",
+    "self-test": "node ./download-recibo-cfe.js --self-test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "dependencies": {}
+}

@@ -1,0 +1,20 @@
+# Forzar LF en archivos de texto y código (consistencia macOS / Linux / WSL)
+* text=auto eol=lf
+
+# Idiomas
+*.js     text eol=lf
+*.ts     text eol=lf
+*.json   text eol=lf
+*.py     text eol=lf
+*.sh     text eol=lf
+*.md     text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+
+# Marcar binarios para diffs limpios
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.pdf    binary
+*.ico    binary

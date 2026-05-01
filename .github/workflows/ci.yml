@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  syntax:
+    name: Syntax & static checks
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [18, 20, 22]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: node --check (todos los .js)
+        run: |
+          set -e
+          while IFS= read -r f; do
+            echo "checking $f"
+            node --check "$f"
+          done < <(find . -path ./node_modules -prune -o -name '*.js' -print)
+
+      - name: bash -n (todos los .sh)
+        run: |
+          set -e
+          while IFS= read -r f; do
+            echo "checking $f"
+            bash -n "$f"
+          done < <(find . -path ./node_modules -prune -o -name '*.sh' -print)
+
+      - name: python -m py_compile (todos los .py)
+        run: |
+          set -e
+          while IFS= read -r f; do
+            echo "checking $f"
+            python3 -m py_compile "$f"
+          done < <(find . -path ./node_modules -prune -o -name '*.py' -print)
+
+  preflight:
+    name: Preflight & self-test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install buzon-tributario deps
+        working-directory: buzon-tributario
+        run: npm install --no-audit --no-fund
+
+      - name: Install constancia-situacion-fiscal deps
+        working-directory: constancia-situacion-fiscal
+        run: npm install --no-audit --no-fund
+
+      - name: buzon-tributario --preflight (espera fallo por env vars faltantes)
+        working-directory: buzon-tributario
+        run: |
+          set +e
+          out=$(node ./scripts/check-buzon.js --preflight)
+          code=$?
+          echo "$out"
+          test "$code" -eq 2
+          echo "$out" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['status']=='preflight_failed', d"
+
+      - name: constancia-situacion-fiscal --preflight (espera fallo por env vars faltantes)
+        working-directory: constancia-situacion-fiscal
+        run: |
+          set +e
+          out=$(node ./sat-flow.js --preflight)
+          code=$?
+          echo "$out"
+          test "$code" -eq 2
+
+      - name: constancia-situacion-fiscal --self-test
+        working-directory: constancia-situacion-fiscal
+        run: node ./sat-flow.js --self-test
+
+      - name: recibo-cfe --preflight (espera fallo por env vars faltantes)
+        working-directory: recibo-cfe
+        run: |
+          set +e
+          out=$(node ./download-recibo-cfe.js --preflight)
+          code=$?
+          echo "$out"
+          test "$code" -eq 2
+
+      - name: recibo-cfe --self-test
+        working-directory: recibo-cfe
+        run: node ./download-recibo-cfe.js --self-test
+
+      - name: constancia-fiscal-extractor preflight (PDF inválido => exit 1)
+        run: |
+          set +e
+          echo "not a pdf" > /tmp/notapdf.txt
+          out=$(python3 ./constancia-fiscal-extractor/scripts/preflight.py /tmp/notapdf.txt)
+          code=$?
+          echo "$out"
+          test "$code" -eq 1
+
+      - name: constancia-fiscal-extractor validate.py (RFC genérico SAT)
+        run: |
+          out=$(python3 ./constancia-fiscal-extractor/scripts/validate.py <<'JSON'
+          {"rfc":"xaxx010101000","nameOrBusinessName":"PUBLICO EN GENERAL","postalCode":"06100"}
+          JSON
+          )
+          echo "$out"
+          echo "$out" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['rfc']=='XAXX010101000', d; assert d['personaType']=='FISICA', d"

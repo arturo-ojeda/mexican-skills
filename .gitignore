@@ -1,0 +1,38 @@
+# Dependencias instaladas (se regeneran con `npm install`)
+node_modules/
+
+# Outputs en runtime (screenshots, PDFs, state.json con datos personales)
+artifacts/
+**/artifacts/
+
+# Logs y perfiles temporales de Chrome
+*.log
+sat-*-chrome-profile/
+cfe-chrome-profile/
+
+# Credenciales / secretos por si alguien los deja por accidente
+.env
+.env.*
+!.env.example
+*.secret
+secrets.json
+
+# macOS / editor
+.DS_Store
+.AppleDouble
+.LSOverride
+.idea/
+.vscode/
+*.swp
+*~
+
+# Python (por si alguna skill futura lo usa)
+__pycache__/
+*.pyc
+
+# npm / yarn / pnpm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/

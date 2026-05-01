@@ -1,0 +1,25 @@
+{
+  "name": "constancia-sat-skill",
+  "version": "1.0.0",
+  "private": true,
+  "bin": {
+    "constancia-sat": "./sat-flow.js"
+  },
+  "scripts": {
+    "constancia": "node ./sat-flow.js",
+    "preflight": "node ./sat-flow.js --preflight",
+    "self-test": "node ./sat-flow.js --self-test",
+    "capture-live-pdf": "node ./capture-live-constancia-pdf.js",
+    "capture-live-pdf:self-test": "node ./capture-live-constancia-pdf.js --self-test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "dependencies": {
+    "playwright-core": "^1.59.1"
+  }
+}
