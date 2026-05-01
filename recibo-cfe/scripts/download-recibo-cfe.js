@@ -8,11 +8,11 @@ const https = require('https');
 const { URL } = require('url');
 const { execFileSync } = require('child_process');
 
-const SKILL_ROOT = __dirname;
+const SKILL_ROOT = path.dirname(__dirname);
 const ARTIFACTS_DIR = process.env.CFE_ARTIFACTS_DIR || path.join(process.cwd(), 'artifacts');
 const LOGIN_URL = process.env.CFE_LOGIN_URL || 'https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/Login.aspx';
 const RECEIPTS_URL = process.env.CFE_RECEIPTS_URL || 'https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/default.aspx';
-const NORMALIZE_SCRIPT = path.join(SKILL_ROOT, 'normalize-recibo-cfe.sh');
+const NORMALIZE_SCRIPT = path.join(__dirname, 'normalize-recibo-cfe.sh');
 const PDF_NAME_PREFIX = process.env.CFE_PDF_NAME_PREFIX || 'Recibo CFE';
 const REQUEST_TIMEOUT_MS = Number(process.env.CFE_TIMEOUT_MS || 30000);
 const RETRIES = Number(process.env.CFE_RETRIES || 3);
@@ -72,24 +72,57 @@ function readShellVar(key) {
   return null;
 }
 
+function profilePath() {
+  if (process.env.MEXICAN_SKILLS_PROFILE) return process.env.MEXICAN_SKILLS_PROFILE;
+  const xdg = process.env.XDG_CONFIG_HOME && process.env.XDG_CONFIG_HOME.trim()
+    ? process.env.XDG_CONFIG_HOME
+    : path.join(os.homedir(), '.config');
+  return path.join(xdg, 'mexican-skills', 'profile.json');
+}
+
+function readProfileField(key) {
+  const file = profilePath();
+  if (!fs.existsSync(file)) return null;
+  try {
+    const data = JSON.parse(fs.readFileSync(file, 'utf8') || '{}');
+    const value = data && typeof data === 'object' ? data[key] : undefined;
+    if (value === undefined || value === null || value === '') return null;
+    return { value: String(value), source: file };
+  } catch {
+    return null;
+  }
+}
+
 function loadCredentials({ allowMissing = false } = {}) {
   const envUsername = process.env.CFE_USERNAME || '';
   const envPassword = process.env.CFE_PASSWORD || '';
   const shellUsername = envUsername ? null : readShellVar('CFE_USERNAME');
   const shellPassword = envPassword ? null : readShellVar('CFE_PASSWORD');
-  const username = envUsername || shellUsername?.value || '';
+  const profileUsername = (envUsername || shellUsername) ? null : readProfileField('cfeUsername');
+  const username = envUsername || shellUsername?.value || profileUsername?.value || '';
   const password = envPassword || shellPassword?.value || '';
+
+  let usernameSource;
+  if (envUsername) usernameSource = 'environment';
+  else if (shellUsername) usernameSource = shellUsername.source;
+  else if (profileUsername) usernameSource = profileUsername.source;
+  else usernameSource = 'missing';
+
+  const passwordSource = envPassword
+    ? 'environment'
+    : (shellPassword?.source || 'missing');
+
   const source = envUsername || envPassword
     ? 'environment'
-    : (shellUsername?.source || shellPassword?.source || 'missing');
+    : (shellUsername?.source || shellPassword?.source || profileUsername?.source || 'missing');
 
   const missing = [];
   if (!username) missing.push('CFE_USERNAME');
   if (!password) missing.push('CFE_PASSWORD');
   if (missing.length && !allowMissing) {
-    throw new Error(`Faltan credenciales CFE. Define ${missing.join(' y ')} en el entorno o en archivos shell del usuario (~/.zshrc, etc.).`);
+    throw new Error(`Faltan credenciales CFE: ${missing.join(' y ')}. CFE_USERNAME puede vivir en env, shell rc, o el profile (${profilePath()}). CFE_PASSWORD siempre en env o shell rc — nunca en el profile.`);
   }
-  return { username, password, source, missing };
+  return { username, password, source, usernameSource, passwordSource, profilePath: profilePath(), missing };
 }
 
 class SessionClient {
@@ -239,8 +272,8 @@ function preflight() {
   const issues = [];
   const notes = [];
 
-  if (!credentials.username) issues.push('CFE_USERNAME no está definida.');
-  if (!credentials.password) issues.push('CFE_PASSWORD no está definida.');
+  if (!credentials.username) issues.push(`CFE_USERNAME no está definida (env, shell rc, ni profile ${credentials.profilePath}).`);
+  if (!credentials.password) issues.push('CFE_PASSWORD no está definida (debe ir en env o shell rc; nunca en profile).');
   if (!fs.existsSync(NORMALIZE_SCRIPT)) issues.push(`Falta el script de normalización: ${NORMALIZE_SCRIPT}`);
   else {
     try {
@@ -270,6 +303,9 @@ function preflight() {
       TWOCAPTCHA_API_KEY: process.env.TWOCAPTCHA_API_KEY || process.env.CAPTCHA_SOLVER_API_KEY ? 'set' : 'optional_missing',
     },
     credentialSource: credentials.source,
+    usernameSource: credentials.usernameSource,
+    passwordSource: credentials.passwordSource,
+    profilePath: credentials.profilePath,
     issues,
     notes,
   };
@@ -290,12 +326,15 @@ function selfTest() {
     finalPdfName: `${PDF_NAME_PREFIX} <DD-MM-YYYY>.pdf`,
     credentialsAvailable: Boolean(credentials.username && credentials.password),
     credentialSource: credentials.source,
+    usernameSource: credentials.usernameSource,
+    passwordSource: credentials.passwordSource,
+    profilePath: credentials.profilePath,
   }, null, 2));
 }
 
 function usage() {
   return [
-    'Uso: node download-recibo-cfe.js [--preflight] [--self-test] [--help]',
+    'Uso: node scripts/download-recibo-cfe.js [--preflight] [--self-test] [--help]',
     '',
     'Variables de entorno:',
     '  CFE_USERNAME, CFE_PASSWORD (requeridas)',

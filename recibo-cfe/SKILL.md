@@ -5,11 +5,11 @@ description: Descarga el recibo más reciente de CFE (Comisión Federal de Elect
 
 # Recibo CFE / Comprobante de domicilio
 
-> Tip: si tienes la skill [`agent-browser`](https://github.com/agent-browser) instalada, considera usarla cuando CFE cambie su portal o introduzca CAPTCHA — su CLI es más resistente a cambios de DOM que el flujo HTTP de esta skill. Hoy esta skill funciona sin navegador (sólo `https` + cookies de Node), pero `agent-browser` es la opción recomendada cuando esté disponible y CFE rompa el flujo actual.
+> Tip: si tienes la skill [`agent-browser`](https://github.com/vercel-labs/agent-browser) instalada, considera usarla cuando CFE cambie su portal o introduzca CAPTCHA — su CLI es más resistente a cambios de DOM que el flujo HTTP de esta skill. Hoy esta skill funciona sin navegador (sólo `https` + cookies de Node), pero `agent-browser` es la opción recomendada cuando esté disponible y CFE rompa el flujo actual.
 
 ## Entrypoint estable
 
-- Script principal: `./download-recibo-cfe.js`
+- Script principal: `./scripts/download-recibo-cfe.js`
 - Ejecuta el flujo completo y devuelve JSON con `finalPath`.
 - Nombre final por default: `Recibo CFE DD-MM-YYYY.pdf` (configurable con `CFE_PDF_NAME_PREFIX`).
 - El PDF cae en `$(pwd)/artifacts/` por default — la carpeta donde corriste el comando, no dentro de la skill.
@@ -19,14 +19,14 @@ description: Descarga el recibo más reciente de CFE (Comisión Federal de Elect
 Antes de ejecutar el flujo completo, valida el entorno:
 
 ```bash
-node ./download-recibo-cfe.js --preflight
+node ./scripts/download-recibo-cfe.js --preflight
 ```
 
 El pre-flight verifica:
 
 - Versión de Node y plataforma.
 - Que las variables `CFE_USERNAME` y `CFE_PASSWORD` estén disponibles (en entorno o en archivos shell del usuario como `~/.zshrc`, `~/.zprofile`, etc.).
-- Que `normalize-recibo-cfe.sh` exista y sea ejecutable.
+- Que `scripts/normalize-recibo-cfe.sh` exista y sea ejecutable.
 - Que las URLs y la carpeta de artefactos estén configuradas.
 - Reporta si `TWOCAPTCHA_API_KEY` está disponible (no se usa en el flujo actual, pero queda lista por si CFE introduce CAPTCHA).
 
@@ -35,7 +35,7 @@ Si falla, lee `issues` del JSON impreso y corrige antes de continuar.
 ## Self-test
 
 ```bash
-node ./download-recibo-cfe.js --self-test
+node ./scripts/download-recibo-cfe.js --self-test
 ```
 
 Imprime la configuración resuelta sin hacer red.
@@ -43,7 +43,7 @@ Imprime la configuración resuelta sin hacer red.
 ## Uso
 
 ```bash
-node ./download-recibo-cfe.js
+node ./scripts/download-recibo-cfe.js
 ```
 
 Flujo:
@@ -53,7 +53,7 @@ Flujo:
 3. Extrae el primer `__doPostBack(...DescargaPDF...)` de la tabla `GVHistorial` — el recibo más reciente.
 4. POST a `default.aspx` con `__EVENTTARGET` apuntando a ese postback para disparar la descarga PDF.
 5. Valida `Content-Disposition` / `Content-Type` antes de aceptar el binario.
-6. Guarda el PDF en `${CFE_ARTIFACTS_DIR:-$(pwd)/artifacts}/recibo-cfe-<timestamp>.pdf` y luego invoca `normalize-recibo-cfe.sh` para renombrarlo a `<prefix> DD-MM-YYYY.pdf`.
+6. Guarda el PDF en `${CFE_ARTIFACTS_DIR:-$(pwd)/artifacts}/recibo-cfe-<timestamp>.pdf` y luego invoca `scripts/normalize-recibo-cfe.sh` para renombrarlo a `<prefix> DD-MM-YYYY.pdf`.
 
 ## Resultado mínimo aceptable
 
@@ -61,13 +61,30 @@ Flujo:
 - Ruta final dentro de `<artifactsDir>` (default: `$(pwd)/artifacts/` — la carpeta donde corriste el comando).
 - No declarar éxito si no existe PDF real.
 
+## Memoria de datos personales
+
+`CFE_USERNAME` (correo o RPU) NO es secreto: el usuario lo escribiría una y otra vez. Esta skill lo resuelve con la cadena env → shell rc → **profile compartido** (`${MEXICAN_SKILLS_PROFILE:-${XDG_CONFIG_HOME:-~/.config}/mexican-skills/profile.json}`, campo `cfeUsername`).
+
+El profile es un JSON plano con permisos `0600`. Si el usuario te proporciona el username en la conversación, **escríbelo al profile** y reúsalo. Ejemplo del archivo:
+
+```json
+{
+  "cfeUsername": "mi-correo@example.com"
+}
+```
+
+`CFE_PASSWORD` **es secreto**: vive sólo en `process.env` o shell rc, nunca en el profile.
+
+`usernameSource`, `passwordSource` y `profilePath` en el output del `--preflight` y `--self-test` te dicen de dónde salió cada credencial.
+
 ## Variables de entorno
 
-| Variable | Propósito | Default |
-| -------- | --------- | ------- |
-| `CFE_USERNAME` | Usuario de Mi Espacio CFE (correo o RPU). | — (requerida) |
-| `CFE_PASSWORD` | Contraseña de Mi Espacio CFE. | — (requerida) |
-| `TWOCAPTCHA_API_KEY` | API key de 2Captcha (no se usa hoy, queda disponible si CFE introduce CAPTCHA). Acepta `CAPTCHA_SOLVER_API_KEY` como alias. | — (opcional) |
+| Variable | Propósito | ¿Acepta profile? | Default |
+| -------- | --------- | ---------------- | ------- |
+| `CFE_USERNAME` | Usuario de Mi Espacio CFE (correo o RPU). | Sí (`cfeUsername`) | — (requerida) |
+| `CFE_PASSWORD` | Contraseña de Mi Espacio CFE. **Secreto.** | No | — (requerida) |
+| `TWOCAPTCHA_API_KEY` | API key de 2Captcha (no se usa hoy, queda disponible si CFE introduce CAPTCHA). Acepta `CAPTCHA_SOLVER_API_KEY` como alias. **Secreto.** | No | — (opcional) |
+| `MEXICAN_SKILLS_PROFILE` | Override del path del profile. | — | `${XDG_CONFIG_HOME:-~/.config}/mexican-skills/profile.json` |
 | `CFE_ARTIFACTS_DIR` | Carpeta de salida. | `$(pwd)/artifacts` (CWD donde corres el comando) |
 | `CFE_LOGIN_URL` | URL del login. | `https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/Login.aspx` |
 | `CFE_RECEIPTS_URL` | URL de recibos / postback. | `https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/default.aspx` |

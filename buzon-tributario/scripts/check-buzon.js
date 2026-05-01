@@ -89,21 +89,45 @@ function readShellVar(key) {
   return '';
 }
 
+function profilePath() {
+  if (process.env.MEXICAN_SKILLS_PROFILE) return process.env.MEXICAN_SKILLS_PROFILE;
+  const xdg = process.env.XDG_CONFIG_HOME && process.env.XDG_CONFIG_HOME.trim()
+    ? process.env.XDG_CONFIG_HOME
+    : path.join(os.homedir(), '.config');
+  return path.join(xdg, 'mexican-skills', 'profile.json');
+}
+
+function readProfileField(key) {
+  const file = profilePath();
+  if (!fs.existsSync(file)) return '';
+  try {
+    const data = JSON.parse(fs.readFileSync(file, 'utf8') || '{}');
+    const value = data && typeof data === 'object' ? data[key] : undefined;
+    if (value === undefined || value === null || value === '') return '';
+    return String(value);
+  } catch {
+    return '';
+  }
+}
+
 function loadConfig({ allowMissing = false } = {}) {
-  const rfc = process.env.SAT_RFC || readShellVar('SAT_RFC');
+  const rfc = process.env.SAT_RFC || readShellVar('SAT_RFC') || readProfileField('rfc');
   const password = process.env.SAT_PASSWORD || readShellVar('SAT_PASSWORD');
   const solverKey = process.env.TWOCAPTCHA_API_KEY
     || process.env.CAPTCHA_SOLVER_API_KEY
     || readShellVar('TWOCAPTCHA_API_KEY')
     || readShellVar('CAPTCHA_SOLVER_API_KEY');
+  const rfcSource = process.env.SAT_RFC
+    ? 'environment'
+    : (readShellVar('SAT_RFC') ? 'shell-rc' : (readProfileField('rfc') ? profilePath() : 'missing'));
   const missing = [];
   if (!rfc) missing.push('SAT_RFC');
   if (!password) missing.push('SAT_PASSWORD');
   if (!solverKey) missing.push('TWOCAPTCHA_API_KEY');
   if (missing.length && !allowMissing) {
-    throw new Error(`Faltan variables de entorno requeridas: ${missing.join(', ')}`);
+    throw new Error(`Faltan credenciales requeridas: ${missing.join(', ')}. SAT_RFC puede vivir en env, shell rc, o el profile (${profilePath()}). SAT_PASSWORD y TWOCAPTCHA_API_KEY siempre en env o shell rc — nunca en el profile.`);
   }
-  return { rfc, password, solverKey, missing };
+  return { rfc, password, solverKey, missing, rfcSource, profilePath: profilePath() };
 }
 
 function preflight() {
@@ -135,8 +159,10 @@ function preflight() {
   result.env.SAT_RFC = config.rfc ? 'set' : 'missing';
   result.env.SAT_PASSWORD = config.password ? 'set' : 'missing';
   result.env.TWOCAPTCHA_API_KEY = config.solverKey ? 'set' : 'missing';
+  result.rfcSource = config.rfcSource;
+  result.profilePath = config.profilePath;
   if (config.missing.length) {
-    result.issues.push(`Variables faltantes: ${config.missing.join(', ')}`);
+    result.issues.push(`Variables faltantes: ${config.missing.join(', ')}. SAT_RFC también acepta el profile (${config.profilePath}); password y solver key siempre en env/shell.`);
   }
 
   result.status = result.issues.length ? 'preflight_failed' : 'preflight_ok';

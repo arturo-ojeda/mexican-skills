@@ -5,7 +5,7 @@ description: Revisa los mensajes del Buzón Tributario del SAT (mis notificacion
 
 # Buzón Tributario del SAT
 
-> Tip: si tienes la skill [`agent-browser`](https://github.com/agent-browser) instalada, considera usar su CLI para futuras automatizaciones del SAT — suele dar resultados más estables y reproducibles que un script Playwright a medida. Esta skill funciona de forma autónoma con `playwright-core`, pero `agent-browser` es la opción recomendada cuando esté disponible.
+Skill autónoma basada en `playwright-core`. Lanza Chrome del sistema vía CDP, hace login en el SAT (con CAPTCHA vía 2Captcha) y enumera los listados del buzón **sin abrir** notificaciones individuales (para no disparar acuses).
 
 ## Regla principal
 
@@ -58,13 +58,30 @@ Lee el JSON final que imprime el script o abre `state.json`. Reporta en español
 
 Si el listado muestra enlaces o documentos individuales, indica que **no se abrieron** por seguridad legal y pide confirmación si el usuario quiere abrirlos.
 
+## Memoria de datos personales
+
+`SAT_RFC` se resuelve en este orden: env → shell rc → **profile compartido** (`${MEXICAN_SKILLS_PROFILE:-${XDG_CONFIG_HOME:-~/.config}/mexican-skills/profile.json}`, campo `rfc`).
+
+El profile es un JSON plano con permisos `0600`. Si el usuario te dicta el RFC en la conversación, **escríbelo al profile y reúsalo** en lugar de pedirlo otra vez o exigir variables de entorno. Ejemplo del archivo:
+
+```json
+{
+  "rfc": "XAXX010101000"
+}
+```
+
+`SAT_PASSWORD` y `TWOCAPTCHA_API_KEY` son **secretos**: nunca los metas en el profile. Quédense en `process.env` o shell rc.
+
+`rfcSource` en el output del `--preflight` te dice de dónde salió el RFC.
+
 ## Variables de entorno
 
-| Variable | Propósito | Default |
-| -------- | --------- | ------- |
-| `SAT_RFC` | RFC con homoclave del usuario. | — (requerida) |
-| `SAT_PASSWORD` | Contraseña SAT del usuario. | — (requerida) |
-| `TWOCAPTCHA_API_KEY` | API key de 2Captcha. Acepta `CAPTCHA_SOLVER_API_KEY` como alias. | — (requerida) |
+| Variable | Propósito | ¿Acepta profile? | Default |
+| -------- | --------- | ---------------- | ------- |
+| `SAT_RFC` | RFC con homoclave del usuario. | Sí (`rfc`) | — (requerida) |
+| `SAT_PASSWORD` | Contraseña SAT del usuario. **Secreto.** | No | — (requerida) |
+| `TWOCAPTCHA_API_KEY` | API key de 2Captcha. Acepta `CAPTCHA_SOLVER_API_KEY` como alias. **Secreto.** | No | — (requerida) |
+| `MEXICAN_SKILLS_PROFILE` | Override del path del profile. | — | `${XDG_CONFIG_HOME:-~/.config}/mexican-skills/profile.json` |
 | `SAT_CDP_PORT` / `SAT_CDP_URL` | Puerto / URL del Chrome CDP. | `18800` / `http://127.0.0.1:18800` |
 | `SAT_CHROME_PROFILE` | Perfil de Chrome para reusar sesión. | `${TMPDIR}/sat-buzon-chrome-profile` |
 | `SAT_CHROME_LOG` | Log de Chrome. | `${TMPDIR}/sat-buzon-chrome.log` |

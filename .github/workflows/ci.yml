@@ -58,11 +58,11 @@ jobs:
 
       - name: Install buzon-tributario deps
         working-directory: buzon-tributario
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Install constancia-situacion-fiscal deps
         working-directory: constancia-situacion-fiscal
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: buzon-tributario --preflight (espera fallo por env vars faltantes)
         working-directory: buzon-tributario
@@ -78,7 +78,7 @@ jobs:
         working-directory: constancia-situacion-fiscal
         run: |
           set +e
-          out=$(node ./sat-flow.js --preflight)
+          out=$(node ./scripts/sat-flow.js --preflight)
           code=$?
           echo "$out"
           test "$code" -eq 2
@@ -86,22 +86,25 @@ jobs:
       - name: constancia-situacion-fiscal --self-test (artifactsDir cae en CWD)
         run: |
           mkdir -p /tmp/work && cd /tmp/work
-          out=$(node "$GITHUB_WORKSPACE/constancia-situacion-fiscal/sat-flow.js" --self-test)
+          # En macOS /tmp es symlink a /private/tmp, así que process.cwd() lo resuelve.
+          # Preguntamos a node cuál es su CWD para comparar manzanas con manzanas.
+          expected="$(node -e 'console.log(process.cwd())')/artifacts"
+          out=$(node "$GITHUB_WORKSPACE/constancia-situacion-fiscal/scripts/sat-flow.js" --self-test)
           echo "$out"
-          echo "$out" | node -e "let s=''; process.stdin.on('data',c=>s+=c).on('end',()=>{const d=JSON.parse(s); if(d.artifactsDir !== '/tmp/work/artifacts'){throw new Error('expected /tmp/work/artifacts, got '+d.artifactsDir);}})"
+          echo "$out" | EXPECTED="$expected" node -e "let s=''; process.stdin.on('data',c=>s+=c).on('end',()=>{const d=JSON.parse(s); if(d.artifactsDir !== process.env.EXPECTED){throw new Error('expected '+process.env.EXPECTED+', got '+d.artifactsDir);}})"
 
       - name: recibo-cfe --preflight (espera fallo por env vars faltantes)
         working-directory: recibo-cfe
         run: |
           set +e
-          out=$(node ./download-recibo-cfe.js --preflight)
+          out=$(node ./scripts/download-recibo-cfe.js --preflight)
           code=$?
           echo "$out"
           test "$code" -eq 2
 
       - name: recibo-cfe --self-test
         working-directory: recibo-cfe
-        run: node ./download-recibo-cfe.js --self-test
+        run: node ./scripts/download-recibo-cfe.js --self-test
 
       - name: constancia-fiscal-extractor preflight (PDF inválido => exit 1)
         run: |
@@ -117,3 +120,27 @@ jobs:
           out=$(echo '{"rfc":"xaxx010101000","nameOrBusinessName":"PUBLICO EN GENERAL","postalCode":"06100"}' | node ./constancia-fiscal-extractor/scripts/validate.js)
           echo "$out"
           echo "$out" | node -e "let s=''; process.stdin.on('data',c=>s+=c).on('end',()=>{const d=JSON.parse(s); if(d.rfc!=='XAXX010101000' || d.personaType!=='FISICA'){throw new Error(s);}})"
+
+  unit-tests:
+    name: Unit tests & SKILL.md lint
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [18, 20, 22]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Lint estructural de SKILL.md
+        run: node ./scripts/lint-skills.js
+
+      - name: Unit tests (constancia-fiscal-extractor)
+        working-directory: constancia-fiscal-extractor
+        run: node --test test/*.test.js

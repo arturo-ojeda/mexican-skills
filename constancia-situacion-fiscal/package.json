@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "bin": {
-    "constancia-sat": "./sat-flow.js"
+    "constancia-sat": "./scripts/sat-flow.js"
   },
   "scripts": {
-    "constancia": "node ./sat-flow.js",
-    "preflight": "node ./sat-flow.js --preflight",
-    "self-test": "node ./sat-flow.js --self-test",
-    "capture-live-pdf": "node ./capture-live-constancia-pdf.js",
-    "capture-live-pdf:self-test": "node ./capture-live-constancia-pdf.js --self-test"
+    "constancia": "node ./scripts/sat-flow.js",
+    "preflight": "node ./scripts/sat-flow.js --preflight",
+    "self-test": "node ./scripts/sat-flow.js --self-test",
+    "capture-live-pdf": "node ./scripts/capture-live-constancia-pdf.js",
+    "capture-live-pdf:self-test": "node ./scripts/capture-live-constancia-pdf.js --self-test"
   },
   "engines": {
     "node": ">=18"

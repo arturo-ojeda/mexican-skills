@@ -21,7 +21,7 @@ const {
   ensureDir,
   locateConstanciaFrame,
   nowStamp,
-} = require('../sat-pdf-tools');
+} = require('./sat-pdf-tools');
 
 const DEFAULT_CDP_URL = process.env.SAT_CDP_URL || 'http://127.0.0.1:18800';
 const DEFAULT_OPERATION_HINT = '/operacion/53027/';

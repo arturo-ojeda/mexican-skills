@@ -4,12 +4,12 @@
   "private": true,
   "description": "Descarga el recibo más reciente de CFE en PDF para usarlo como comprobante de domicilio.",
   "bin": {
-    "recibo-cfe": "./download-recibo-cfe.js"
+    "recibo-cfe": "./scripts/download-recibo-cfe.js"
   },
   "scripts": {
-    "download": "node ./download-recibo-cfe.js",
-    "preflight": "node ./download-recibo-cfe.js --preflight",
-    "self-test": "node ./download-recibo-cfe.js --self-test"
+    "download": "node ./scripts/download-recibo-cfe.js",
+    "preflight": "node ./scripts/download-recibo-cfe.js --preflight",
+    "self-test": "node ./scripts/download-recibo-cfe.js --self-test"
   },
   "engines": {
     "node": ">=18"

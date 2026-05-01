@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-const SKILL_ROOT = path.resolve(__dirname);
 const DEFAULT_ARTIFACTS_DIR = process.env.SAT_ARTIFACTS_DIR || path.join(process.cwd(), 'artifacts');
 const DEFAULT_PDF_PATH = process.env.SAT_PDF_PATH || '/PTSC/IdcSiat/IdcGeneraConstancia.jsf';
 const PDF_TIMEOUT = Number(process.env.SAT_PDF_TIMEOUT_MS || 30000);

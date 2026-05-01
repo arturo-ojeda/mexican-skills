@@ -13,7 +13,7 @@
 | 🔍 | [`constancia-fiscal-extractor`](./constancia-fiscal-extractor) | Convierte un PDF de CSF en JSON normalizado. |
 | ⚡ | [`recibo-cfe`](./recibo-cfe) | Descarga el recibo de luz más reciente para usar como comprobante de domicilio. |
 
-> Cada skill tiene su `SKILL.md` con todos los detalles. **Léelo antes de invocarla.**
+Cada skill tiene su `SKILL.md` con todos los detalles. **Léelo antes de invocarla.**
 
 ```text
 📄 constancia-situacion-fiscal  →  🔍 constancia-fiscal-extractor  →  💰 facturación
@@ -23,64 +23,79 @@
 ## 🚀 Setup
 
 ```bash
-# 1. Clona y entra
 git clone <repo> && cd mexican-skills
 
-# 2. Instala dependencias por skill (las que uses)
+# Instala sólo las skills que vayas a usar
 cd buzon-tributario && npm install && cd ..
 cd constancia-situacion-fiscal && npm install && cd ..
 cd recibo-cfe && npm install && cd ..
 
-# 3. Configura credenciales
+# Configura secretos (las skills NO leen .env automáticamente; expórtalos)
 cp .env.example .env && $EDITOR .env
 export $(grep -v '^#' .env | xargs)
 
-# 4. Pre-flight (valida entorno antes de correr)
-node ./constancia-situacion-fiscal/sat-flow.js --preflight
+# Pre-flight (valida entorno antes de correr)
+node ./constancia-situacion-fiscal/scripts/sat-flow.js --preflight
 ```
 
 ## 🔑 Variables clave
 
-| | Variable | Para |
-|---|---|---|
-| 🛂 | `SAT_RFC`, `SAT_PASSWORD` | Skills SAT |
-| ⚡ | `CFE_USERNAME`, `CFE_PASSWORD` | Skill CFE |
-| 🤖 | `TWOCAPTCHA_API_KEY` | CAPTCHA del SAT (cuenta en [2captcha.com](https://2captcha.com)) |
-| 🌐 | `CHROME_BIN` | Override del binario de Chrome (si la detección automática falla) |
+| | Variable | Para | Tipo |
+|---|---|---|---|
+| 🛂 | `SAT_RFC` | Skills SAT | PII (acepta profile) |
+| 🔒 | `SAT_PASSWORD` | Skills SAT | **Secreto** |
+| ⚡ | `CFE_USERNAME` | Skill CFE | PII (acepta profile) |
+| 🔒 | `CFE_PASSWORD` | Skill CFE | **Secreto** |
+| 🔒 | `TWOCAPTCHA_API_KEY` | CAPTCHA del SAT (cuenta en [2captcha.com](https://2captcha.com)) | **Secreto** |
+| 🌐 | `CHROME_BIN` | Override del binario de Chrome (si la detección falla) | Path |
 
-📋 Lista completa: [`.env.example`](./.env.example) · 📖 Detalles por skill: cada `SKILL.md`.
+Lista completa: [`.env.example`](./.env.example).
+
+**Resolución por dato:** `process.env` → `~/.zshrc`/`~/.zprofile`/`~/.bashrc`/`~/.bash_profile`/`~/.profile` → [profile](#-profile-pii-no-secreta) → preguntar.
+
+## 🧠 Profile (PII no-secreta)
+
+Sólo los **secretos** viven en env/shell rc. La PII no-secreta (RFC, nombre, CP, régimen, uso CFDI, email, usuario CFE) vive en un JSON local con permisos `0600`:
+
+```text
+${MEXICAN_SKILLS_PROFILE:-${XDG_CONFIG_HOME:-~/.config}/mexican-skills/profile.json}
+```
+
+```json
+{
+  "rfc": "XAXX010101000",
+  "nameOrBusinessName": "PUBLICO EN GENERAL",
+  "postalCode": "06100",
+  "primaryRegimeCode": "612",
+  "usoCfdi": "G03",
+  "email": "mi@correo.com",
+  "cfeUsername": "mi@correo.com"
+}
+```
+
+Claves canónicas: `rfc`, `nameOrBusinessName`, `personaType`, `postalCode`, `primaryRegimeCode`, `regimes`, `address`, `usoCfdi`, `email`, `cfeUsername`. Úsalas para que las skills se hablen entre sí — el output normalizado de `constancia-fiscal-extractor` se mergea directo al profile.
+
+**JAMÁS** metas secretos (`password`, `apiKey`, `token`, etc.) en el profile.
 
 ## 📁 Outputs
 
-Los PDFs y screenshots caen en **`$(pwd)/artifacts/`** — la carpeta desde donde corres el comando, no dentro de la skill. Override con `*_ARTIFACTS_DIR`.
+Los PDFs y screenshots caen en **`$(pwd)/artifacts/`** — la carpeta desde donde corres el comando, no dentro de la skill. Override por skill: `SAT_ARTIFACTS_DIR`, `SAT_BUZON_ARTIFACTS_DIR`, `CFE_ARTIFACTS_DIR`. Ya están ignoradas por git, pero contienen PII: bórralas antes de compartir.
 
 ```bash
-# Limpia los artifacts del CWD actual
-./scripts/clean-artifacts.sh
-
-# Otras opciones
-./scripts/clean-artifacts.sh --dry-run
-./scripts/clean-artifacts.sh --older-than 7
-./scripts/clean-artifacts.sh --recursive ~/dev
+rm -rf ./artifacts/*
 ```
-
-## 🤝 Recomendación: `agent-browser`
-
-Si tienes [`agent-browser`](https://github.com/agent-browser) instalada, úsala como primera opción para flujos de navegador — es más estable cuando los portales del SAT/CFE cambian de DOM. Las skills aquí funcionan de forma autónoma, pero `agent-browser` es la opción recomendada cuando esté disponible.
 
 ## 📜 Convenciones
 
-- 🇲🇽 Triggers en español neutro/mexicano en cada `SKILL.md`.
+- 🇲🇽 Triggers en español neutro/mexicano. Claves JSON en inglés.
 - ✅ `--preflight` y `--self-test` en cada skill (JSON con `status` + `issues`).
-- 🔁 Variables del entorno con fallback a `~/.zshrc`, `~/.zprofile`, etc.
-- 📤 Salida JSON estructurada para que el agente la parse con confianza.
-- 🚫 Cero datos personales hardcoded.
+- 📤 Stdout = JSON estructurado; errores y progreso a stderr.
+- 🚫 Cero datos personales hardcoded (los ejemplos usan el RFC genérico `XAXX010101000`).
+- 🔒 Skills con `dependencies` commitean su `package-lock.json` e instalan con `npm ci`. Skills stdlib-only no tienen lock.
 
-## 🔒 Privacidad
+## 🤝 Compañero opcional
 
-- Las credenciales se inyectan en runtime; no hay secretos en el repo.
-- Los ejemplos usan el RFC genérico del SAT: `XAXX010101000`.
-- Las carpetas `artifacts/` (con datos personales) están ignoradas por git. Aun así, limpia con `clean-artifacts.sh` antes de compartir.
+Si tu agente tiene [`agent-browser`](https://github.com/vercel-labs/agent-browser) instalado, úsalo como fallback cuando los portales del SAT/CFE cambien de DOM o agreguen CAPTCHA. Las skills de este repo no lo necesitan para correr.
 
 ## 📜 Licencia
 

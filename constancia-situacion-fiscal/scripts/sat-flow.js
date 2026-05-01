@@ -27,7 +27,7 @@ const {
   finalPdfName,
   locateConstanciaFrame,
   sleep,
-} = require('../sat-pdf-tools');
+} = require('./sat-pdf-tools');
 
 const DEFAULT_CDP_PORT = process.env.SAT_CDP_PORT || '18800';
 const DEFAULT_CDP_URL = process.env.SAT_CDP_URL || `http://127.0.0.1:${DEFAULT_CDP_PORT}`;
@@ -48,6 +48,27 @@ const CREDENTIAL_FILES = [
   path.join(os.homedir(), '.bash_profile'),
   path.join(os.homedir(), '.profile'),
 ];
+
+function profilePath() {
+  if (process.env.MEXICAN_SKILLS_PROFILE) return process.env.MEXICAN_SKILLS_PROFILE;
+  const xdg = process.env.XDG_CONFIG_HOME && process.env.XDG_CONFIG_HOME.trim()
+    ? process.env.XDG_CONFIG_HOME
+    : path.join(os.homedir(), '.config');
+  return path.join(xdg, 'mexican-skills', 'profile.json');
+}
+
+function readProfileField(key) {
+  const file = profilePath();
+  if (!fs.existsSync(file)) return null;
+  try {
+    const data = JSON.parse(fs.readFileSync(file, 'utf8') || '{}');
+    const value = data && typeof data === 'object' ? data[key] : undefined;
+    if (value === undefined || value === null || value === '') return null;
+    return { value: String(value), source: file };
+  } catch {
+    return null;
+  }
+}
 
 function nowStamp() {
   return new Date().toISOString().replace(/[:.]/g, '-');
@@ -139,6 +160,13 @@ function loadConfig() {
   const shellSolver = envSolverKey
     ? null
     : (readShellVar('TWOCAPTCHA_API_KEY') || readShellVar('CAPTCHA_SOLVER_API_KEY'));
+  const profileRfc = (envRfc || shellRfc) ? null : readProfileField('rfc');
+
+  let rfcSource;
+  if (envRfc) rfcSource = 'environment';
+  else if (shellRfc) rfcSource = shellRfc.source;
+  else if (profileRfc) rfcSource = profileRfc.source;
+  else rfcSource = 'missing';
 
   return {
     cdpUrl: DEFAULT_CDP_URL,
@@ -146,13 +174,16 @@ function loadConfig() {
     launcherUrl: DEFAULT_LAUNCHER_URL,
     pdfPath: DEFAULT_PDF_PATH,
     artifactsDir: DEFAULT_ARTIFACTS_DIR,
-    rfc: envRfc || shellRfc?.value || '',
+    rfc: envRfc || shellRfc?.value || profileRfc?.value || '',
     password: envPassword || shellPassword?.value || '',
     solverApiKey: envSolverKey || shellSolver?.value || '',
+    rfcSource,
     credentialSource: envRfc || envPassword
       ? 'environment'
-      : (shellRfc?.source || shellPassword?.source || 'missing'),
+      : (shellRfc?.source || shellPassword?.source || profileRfc?.source || 'missing'),
+    passwordSource: envPassword ? 'environment' : (shellPassword?.source || 'missing'),
     solverKeySource: envSolverKey ? 'environment' : (shellSolver?.source || null),
+    profilePath: profilePath(),
   };
 }
 
@@ -493,9 +524,9 @@ function preflightReport() {
   if (!chromium) issues.push(`playwright-core no está instalado. Ejecuta: cd ${SKILL_ROOT} && npm install`);
   if (!chromeBin) issues.push('No se encontró Chrome. Define CHROME_BIN o instálalo.');
   else if (!fs.existsSync(chromeBin)) issues.push(`CHROME_BIN apunta a una ruta inexistente: ${chromeBin}`);
-  if (!config.rfc) issues.push('SAT_RFC no está definida.');
-  if (!config.password) issues.push('SAT_PASSWORD no está definida.');
-  if (!config.solverApiKey) issues.push('TWOCAPTCHA_API_KEY no está definida (se requiere para --auto-solve).');
+  if (!config.rfc) issues.push('SAT_RFC no está definida (env, shell rc, ni profile).');
+  if (!config.password) issues.push('SAT_PASSWORD no está definida (debe ir en env o shell rc; nunca en profile).');
+  if (!config.solverApiKey) issues.push('TWOCAPTCHA_API_KEY no está definida (debe ir en env o shell rc; se requiere para --auto-solve).');
 
   return {
     status: issues.length ? 'preflight_failed' : 'preflight_ok',
@@ -513,7 +544,10 @@ function preflightReport() {
       TWOCAPTCHA_API_KEY: config.solverApiKey ? 'set' : 'missing',
     },
     credentialSource: config.credentialSource,
+    rfcSource: config.rfcSource,
+    passwordSource: config.passwordSource,
     solverKeySource: config.solverKeySource,
+    profilePath: config.profilePath,
     issues,
   };
 }
